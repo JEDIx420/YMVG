@@ -1,0 +1,11 @@
+# Project Execution Roadmap
+- [x] **Phase 1: Foundation & Pipeline** (Next.js, Tailwind, Supabase Client, Netlify config)
+- [x] **Phase 2: Schema & Security** (Supabase DB, pgvector, NVIDIA 2048d migration)
+- [ ] **Phase 3: Data Ingestion** (Node.js CSV Parser, Google Drive Image Pipeline)
+- [x] **Phase 4: Public Interface** (SSR Directory, Hybrid Search UI, Navbar)
+- [x] **Phase 5: AI Semantic Search** (NVIDIA NIM Server Action, RRF Hybrid Search RPC)
+- [x] **Phase 6: Authentication & Portals** (Google OAuth @supabase/ssr, Dashboard Auto-Match)
+- [/] **Phase 8: Regional Hub & Heritage Expansion** (Heritage Static Routes, SWIR Local Leadership directory, Mega-Menu navigation)
+- [ ] **Phase 3: Data Ingestion** (Node.js CSV Parser, Google Drive Image Pipeline)
+- [ ] **Phase 7: Profile Management** (Owner Edit Profile forms, Supabase Storage uploads)
+- [ ] **Phase 9: Lead Generation** (Public contact forms, Lead tracking in Dashboard)
