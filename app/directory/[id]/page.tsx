@@ -1,59 +1,107 @@
-import { createClient } from "@/utils/supabase/server";
+"use client";
+
+import { use, useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { User, MapPin, Mail, Phone, ArrowLeft, Tag, Info, Gift } from "lucide-react";
 import { Business } from "@/types/database.types";
+import { motion } from "framer-motion";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function BusinessSpotlightPage({ params }: PageProps) {
-  const { id } = await params;
-  const supabase = await createClient();
+export default function BusinessSpotlightPage({ params }: PageProps) {
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: business, error } = await supabase
-    .from("businesses")
-    .select("*")
-    .eq("id", id)
-    .single();
+  useEffect(() => {
+    async function fetchBusiness() {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("*")
+        .eq("id", id)
+        .single();
+      
+      if (error || !data) {
+        setBusiness(null);
+      } else {
+        setBusiness(data as Business);
+      }
+      setIsLoading(false);
+    }
+    fetchBusiness();
+  }, [id]);
 
-  if (error || !business) {
+  if (isLoading) {
+    return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-400 uppercase tracking-widest">Loading Spotlight...</div>;
+  }
+
+  if (!business) {
     notFound();
   }
 
-  const b = business as Business;
+  const b = business;
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      {/* STEP 1: Hero Banner */}
-      <section className="relative h-64 md:h-80 bg-gradient-to-r from-blue-950 to-blue-900 overflow-hidden">
-        {/* Decorative mask */}
-        <div className="absolute inset-0 opacity-20">
+    <div className="flex flex-col min-h-screen bg-slate-50 overflow-hidden">
+      {/* STEP 1: Hero Banner with Entrance Animation */}
+      <section className="relative h-64 md:h-96 bg-gradient-to-r from-blue-950 to-blue-900 overflow-hidden">
+        <motion.div 
+          initial={{ scale: 1.1, opacity: 0 }}
+          animate={{ scale: 1, opacity: 0.2 }}
+          transition={{ duration: 1.5 }}
+          className="absolute inset-0"
+        >
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent"></div>
-        </div>
+        </motion.div>
 
         <div className="relative max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12">
-          <Link 
-            href="/directory" 
-            className="absolute top-8 left-4 sm:left-6 lg:left-8 inline-flex items-center text-blue-200 hover:text-white transition-colors text-sm font-medium"
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Directory
-          </Link>
+            <Link 
+              href="/directory" 
+              className="absolute top-8 left-4 sm:left-6 lg:left-8 inline-flex items-center text-blue-200 hover:text-white transition-colors text-sm font-medium"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Directory
+            </Link>
+          </motion.div>
 
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div className="space-y-4">
-              <div className="inline-flex items-center px-3 py-1 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-md shadow-lg shadow-red-900/20">
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="inline-flex items-center px-3 py-1 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-md shadow-lg shadow-red-900/20"
+              >
                 {b.category || "General"}
-              </div>
-              <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight">
+              </motion.div>
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.8 }}
+                className="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight"
+              >
                 {b.brand_name || "Unnamed Business"}
-              </h1>
+              </motion.h1>
               {b.tagline && (
-                <p className="text-xl text-blue-100 italic font-light">
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="text-xl text-blue-100 italic font-light"
+                >
                   "{b.tagline}"
-                </p>
+                </motion.p>
               )}
             </div>
           </div>
@@ -65,8 +113,12 @@ export default async function BusinessSpotlightPage({ params }: PageProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           
           {/* Left Column: 2/3 Content */}
-          <div className="lg:col-span-2 space-y-12">
-            
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="lg:col-span-2 space-y-12"
+          >
             {/* About Section */}
             <div className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
               <div className="flex items-center gap-3 mb-8">
@@ -91,10 +143,14 @@ export default async function BusinessSpotlightPage({ params }: PageProps) {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {b.services.map((service, idx) => (
-                    <div key={idx} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700 font-medium group hover:bg-blue-950 hover:text-white transition-all cursor-default">
-                      <div className="w-2 h-2 bg-red-600 rounded-full mr-4 group-hover:bg-red-400 transition-colors"></div>
+                    <motion.div 
+                      key={idx} 
+                      whileHover={{ x: 5, backgroundColor: "#172554", color: "#fff" }}
+                      className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700 font-medium cursor-default transition-colors"
+                    >
+                      <div className="w-2 h-2 bg-red-600 rounded-full mr-4"></div>
                       {service}
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>
@@ -102,8 +158,11 @@ export default async function BusinessSpotlightPage({ params }: PageProps) {
 
             {/* Special Offer */}
             {b.special_offer && (
-              <div className="bg-red-50 border-l-8 border-red-600 rounded-3xl p-8 md:p-12 shadow-lg shadow-red-900/5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-10">
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                className="bg-red-50 border-l-8 border-red-600 rounded-3xl p-8 md:p-12 shadow-lg shadow-red-900/5 relative overflow-hidden group"
+              >
+                <div className="absolute top-0 right-0 p-8 opacity-10 transition-transform group-hover:scale-110">
                   <Gift className="w-24 h-24 text-red-600" />
                 </div>
                 <div className="relative">
@@ -115,20 +174,29 @@ export default async function BusinessSpotlightPage({ params }: PageProps) {
                     {b.special_offer}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             )}
-          </div>
+          </motion.div>
 
           {/* Right Column: 1/3 Sticky Action Card */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-8">
-              <div className="bg-white rounded-3xl p-8 shadow-2xl shadow-blue-900/10 border border-slate-100">
+            <motion.div 
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.9 }}
+              className="sticky top-24 space-y-8"
+            >
+              <motion.div 
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="bg-white rounded-3xl p-8 shadow-2xl shadow-blue-900/10 border border-slate-100"
+              >
                 <h3 className="text-lg font-black text-blue-950 uppercase tracking-tight mb-8">Verification & Contact</h3>
                 
                 <div className="space-y-6 mb-10">
                   <div className="flex items-start">
-                    <div className="bg-slate-100 p-2 rounded-lg mr-4">
-                      <User className="w-5 h-5 text-slate-500" />
+                    <div className="bg-slate-100 p-2 rounded-lg mr-4 text-slate-500">
+                      <User className="w-5 h-5" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Owner</p>
@@ -137,8 +205,8 @@ export default async function BusinessSpotlightPage({ params }: PageProps) {
                   </div>
 
                   <div className="flex items-start">
-                    <div className="bg-slate-100 p-2 rounded-lg mr-4">
-                      <MapPin className="w-5 h-5 text-slate-500" />
+                    <div className="bg-slate-100 p-2 rounded-lg mr-4 text-slate-500">
+                      <MapPin className="w-5 h-5" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Affiliation</p>
@@ -149,13 +217,15 @@ export default async function BusinessSpotlightPage({ params }: PageProps) {
                 </div>
 
                 <div className="space-y-4">
-                  <a 
+                  <motion.a 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     href={`mailto:${b.contact_email}`}
-                    className="w-full inline-flex items-center justify-center p-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-red-600/30 active:scale-95 text-lg"
+                    className="w-full inline-flex items-center justify-center p-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-red-600/30 text-lg"
                   >
                     <Mail className="w-5 h-5 mr-3" />
                     Enquire Now
-                  </a>
+                  </motion.a>
                   
                   <div className="pt-4 space-y-3">
                     {b.contact_email && (
@@ -173,14 +243,19 @@ export default async function BusinessSpotlightPage({ params }: PageProps) {
                   </div>
                 </div>
 
-                <div className="mt-8 pt-8 border-t border-slate-100">
-                  <div className="inline-flex items-center text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-50 px-3 py-1 rounded-full">
-                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                <div className="mt-8 pt-8 border-t border-slate-100 text-center">
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1.2 }}
+                    className="inline-flex items-center text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-50 px-3 py-1 rounded-full"
+                  >
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
                     Identity Verified
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
 
         </div>

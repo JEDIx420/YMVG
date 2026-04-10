@@ -1,6 +1,38 @@
+"use client";
+
+import { motion } from "framer-motion";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2,
+    },
+  },
+} as const;
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -30 },
+  visible: { 
+    opacity: 1, 
+    x: 0, 
+    transition: { duration: 0.8, ease: "circOut" as const } 
+  },
+} as const;
+
+const itemVariantsRight = {
+  hidden: { opacity: 0, x: 30 },
+  visible: { 
+    opacity: 1, 
+    x: 0, 
+    transition: { duration: 0.8, ease: "circOut" as const } 
+  },
+} as const;
+
 export default function HistoryPage() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen overflow-hidden">
       {/* STEP 1: Mini-Hero Section */}
       <section 
         className="relative min-h-[40vh] flex items-center justify-center bg-cover bg-center"
@@ -9,19 +41,30 @@ export default function HistoryPage() {
         }}
       >
         <div className="absolute inset-0 bg-blue-950/80"></div>
-        <div className="relative text-center px-4 max-w-7xl mx-auto py-20">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1 }}
+          className="relative text-center px-4 max-w-7xl mx-auto py-20"
+        >
           <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-4 leading-tight">
             Our History
           </h1>
           <p className="text-xl md:text-2xl text-blue-100 font-light italic">
             "A century of fellowship, born in 1922."
           </p>
-        </div>
+        </motion.div>
       </section>
 
       {/* STEP 2: The Origin Story */}
       <section className="bg-white py-24 px-4">
-        <div className="max-w-3xl mx-auto text-center space-y-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1 }}
+          className="max-w-3xl mx-auto text-center space-y-8"
+        >
           <div className="inline-flex items-center justify-center mb-6">
             <div className="w-12 h-1 bg-red-600 rounded-full"></div>
           </div>
@@ -34,25 +77,36 @@ export default function HistoryPage() {
             Today, Y's Men International spans across continents, yet remains firmly rooted in its original mission: 
             to serve the YMCA and the broader community.
           </p>
-        </div>
+        </motion.div>
       </section>
 
-      {/* STEP 3: Vertical Timeline UI */}
+      {/* STEP 3: Vertical Timeline UI with Staggered Nodes */}
       <section className="bg-slate-50 py-24 px-4 overflow-hidden">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-20 space-y-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-20 space-y-4"
+          >
             <h2 className="text-4xl font-black text-blue-950 tracking-tight">Timeline of Impact</h2>
             <p className="text-gray-500 font-medium uppercase tracking-widest text-sm">Tracing our roots across the globe</p>
-          </div>
+          </motion.div>
 
           <div className="relative px-6 pb-20">
             {/* Central Vertical Line */}
             <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-0.5 bg-slate-200"></div>
 
             {/* Timeline Nodes */}
-            <div className="space-y-24">
+            <motion.div 
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={containerVariants}
+              className="space-y-24"
+            >
               {/* 1922 */}
-              <div className="relative">
+              <motion.div variants={itemVariants} className="relative">
                 <div className="absolute left-1/2 transform -translate-x-1/2 -top-2 w-6 h-6 bg-red-600 rounded-full border-4 border-white shadow-sm z-10"></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                   <div className="md:text-right">
@@ -65,10 +119,10 @@ export default function HistoryPage() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
               {/* 1924 */}
-              <div className="relative">
+              <motion.div variants={itemVariantsRight} className="relative">
                 <div className="absolute left-1/2 transform -translate-x-1/2 -top-2 w-6 h-6 bg-red-600 rounded-full border-4 border-white shadow-sm z-10"></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                   <div className="md:order-2">
@@ -81,10 +135,10 @@ export default function HistoryPage() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Present Day */}
-              <div className="relative">
+              <motion.div variants={itemVariants} className="relative">
                 <div className="absolute left-1/2 transform -translate-x-1/2 -top-2 w-6 h-6 bg-red-600 rounded-full border-4 border-white shadow-sm z-10"></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                   <div className="md:text-right">
@@ -97,15 +151,21 @@ export default function HistoryPage() {
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </section>
 
       {/* STEP 4: The YMCA Partnership Block */}
       <section className="bg-white py-24 px-4">
-        <div className="max-w-4xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="max-w-4xl mx-auto"
+        >
           <div className="bg-blue-50 border border-blue-100 rounded-3xl p-12 text-center shadow-sm">
             <div className="flex justify-center mb-6">
               <div className="bg-blue-100 p-4 rounded-2xl">
@@ -135,7 +195,7 @@ export default function HistoryPage() {
               </a>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
     </div>
   );

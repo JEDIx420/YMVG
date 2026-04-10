@@ -1,13 +1,33 @@
-import { createClient } from '@/utils/supabase/server'
-import AuthButton from './AuthButton'
-import Link from 'next/link'
+"use client";
 
-export default async function Navbar() {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
+import { useEffect, useState } from 'react';
+import { User } from '@supabase/supabase-js';
+import AuthButton from '@/components/AuthButton';
+import Link from 'next/link';
+
+interface NavbarProps {
+  user: User | null;
+}
+
+export default function Navbar({ user }: NavbarProps) {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <nav className="w-full border-b border-gray-200 bg-white shadow-sm z-50 sticky top-0">
+    <nav 
+      className={`w-full border-b border-gray-200 z-50 sticky top-0 transition-all duration-300 ${
+        isScrolled 
+          ? 'bg-white/80 backdrop-blur-md shadow-md py-2' 
+          : 'bg-white shadow-sm py-0'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left: Logo & Dropdowns */}
@@ -68,7 +88,7 @@ export default async function Navbar() {
 
           {/* Right: Auth & Dashboard */}
           <div className="flex items-center space-x-4">
-            {data?.user && (
+            {user && (
               <Link 
                 href="/dashboard" 
                 className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors px-3 py-1 bg-blue-50 rounded-md"
@@ -76,10 +96,10 @@ export default async function Navbar() {
                 Dashboard
               </Link>
             )}
-            <AuthButton user={data?.user || null} />
+            <AuthButton user={user} />
           </div>
         </div>
       </div>
     </nav>
-  )
+  );
 }

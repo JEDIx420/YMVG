@@ -28,3 +28,21 @@
 
 ## Authentication & Claiming
 * **CRITICAL:** This platform uses closed claiming. Businesses are pre-populated via Google Sheets. Users CANNOT arbitrarily claim businesses. Instead, a Server Action automatically matches the user's Google Auth email against the `contact_email` column in the database to grant ownership.
+
+## 6. UI/UX Standards & Interactions
+To maintain a premium, international NGO aesthetic, the following motion standards are enforced:
+
+### Framework & Timings
+* **Library:** `framer-motion` for all complex animations and layout transitions.
+* **Base Transition:** `duration: 0.4, ease: "easeOut"` for page entrances.
+* **Emphasis Transition:** `duration: 0.8, ease: "circOut"` for major hero reveals.
+
+### Global Interactions
+* **Route Transitions:** Every page MUST utilize `app/template.tsx` for a consistent slide-up entrance.
+* **Sticky Navbar:** Implement `backdrop-blur-md` and background opacity shifts triggered by a `scrollY > 50` threshold.
+
+### Sectional Effects
+* **Staggered Reveals:** Use `staggerChildren: 0.1` for grid items (stats, club lists, business cards) to create a cascading entrance.
+* **Viewport Triggering:** All entrance animations MUST use `whileInView` with `viewport: { once: true }` to avoid repetitive movement.
+* **Layout Transitions:** Business Directory results MUST use the `layout` prop on `motion.div` to ensure cards slide to new positions during search/filtering.
+
