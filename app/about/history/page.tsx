@@ -21,7 +21,7 @@ const milestones = [
     subtitle: "Atlantic City Convention",
     content: "The International Association of Y's Men's Clubs was officially established during the triennial convention of the YMCA in Atlantic City. Judge Paul William Alexander was elected as the first International President.",
     icon: ShieldCheck,
-    image: "/history/founder_portrait_1922_1775833383923.png",
+    image: "/history/founder_real.jpg",
     fact: "The organization was built to unite ordinary people in fellowship to achieve 'extraordinary good'."
   },
   {
