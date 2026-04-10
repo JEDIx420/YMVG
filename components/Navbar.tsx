@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import AuthButton from '@/components/AuthButton';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface NavbarProps {
   user: User | null;
@@ -32,8 +33,20 @@ export default function Navbar({ user }: NavbarProps) {
         <div className="flex justify-between items-center h-16">
           {/* Left: Logo & Dropdowns */}
           <div className="flex items-center space-x-8">
-            <Link href="/" className="text-xl font-bold tracking-tight text-blue-900 border-r border-gray-100 pr-6 mr-2">
-              YMI
+            <Link href="/" className="flex items-center gap-3 border-r border-gray-100 pr-6 mr-2 group">
+              <div className="relative w-8 h-8 md:w-10 md:h-10 transition-transform duration-300 group-hover:scale-110">
+                <Image 
+                  src="/ysmen-footer-logo.png"
+                  alt="YMI Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <div className="flex flex-col leading-none">
+                <span className="text-lg md:text-xl font-black tracking-tighter text-blue-950">YMI</span>
+                <span className="text-[10px] md:text-xs font-bold text-red-600 tracking-widest uppercase">SWIR</span>
+              </div>
             </Link>
 
             <div className="hidden md:flex items-center space-x-6">

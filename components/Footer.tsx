@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -8,10 +9,20 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Brand Column */}
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-white tracking-tight">
-              YMI <span className="text-blue-500">SWIR</span>
-            </h2>
+          <div className="space-y-6">
+            <Link href="/" className="flex items-center gap-4 group">
+              <div className="relative w-12 h-12">
+                <Image 
+                  src="/ysmen-footer-logo.png"
+                  alt="YMI Logo"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <h2 className="text-2xl font-black text-white tracking-tighter">
+                YMI <span className="text-red-500">SWIR</span>
+              </h2>
+            </Link>
             <p className="text-sm leading-relaxed max-w-xs text-gray-400">
               The South West India Region (SWIR) of YsMen International is dedicated to service, fellowship, and building sustainable communities through our global network of clubs.
             </p>

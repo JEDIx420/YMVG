@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Globe, Clock, Heart, Handshake } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
 
@@ -54,6 +55,20 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-blue-950/80 mix-blend-multiply"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-24">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8 }}
+            className="mb-8 relative w-20 h-20 md:w-28 md:h-28 mx-auto"
+          >
+            <Image 
+              src="/ysmen-footer-logo.png"
+              alt="Y's Men Official Logo"
+              fill
+              className="object-contain filter drop-shadow-2xl"
+              priority
+            />
+          </motion.div>
           <motion.p 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "YMI South West India Region",
   description: "International Business Directory and Regional Hub for Y's Men International SWIR",
+  icons: {
+    icon: "/ysmen-footer-logo.png",
+  },
 };
 
 export default async function RootLayout({

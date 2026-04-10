@@ -4,9 +4,11 @@ import { use, useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { User, MapPin, Mail, Phone, ArrowLeft, Tag, Info, Gift } from "lucide-react";
 import { Business } from "@/types/database.types";
 import { motion } from "framer-motion";
+import EnquiryModal from "@/components/EnquiryModal";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,6 +19,7 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
   const id = resolvedParams.id;
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
 
   useEffect(() => {
     async function fetchBusiness() {
@@ -50,15 +53,26 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 overflow-hidden">
       {/* STEP 1: Hero Banner with Entrance Animation */}
-      <section className="relative h-64 md:h-96 bg-gradient-to-r from-blue-950 to-blue-900 overflow-hidden">
-        <motion.div 
-          initial={{ scale: 1.1, opacity: 0 }}
-          animate={{ scale: 1, opacity: 0.2 }}
-          transition={{ duration: 1.5 }}
-          className="absolute inset-0"
-        >
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent"></div>
-        </motion.div>
+      <section className="relative h-64 md:h-96 bg-blue-950 overflow-hidden">
+        {b.primary_image_url ? (
+          <Image 
+            src={b.primary_image_url}
+            alt={b.brand_name || "Business"}
+            fill
+            className="object-cover opacity-40"
+            priority
+          />
+        ) : (
+          <motion.div 
+            initial={{ scale: 1.1, opacity: 0 }}
+            animate={{ scale: 1, opacity: 0.2 }}
+            transition={{ duration: 1.5 }}
+            className="absolute inset-0 bg-gradient-to-r from-blue-950 to-blue-900"
+          >
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent"></div>
+          </motion.div>
+        )}
+        <div className="absolute inset-0 bg-blue-950/20"></div>
 
         <div className="relative max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12">
           <motion.div
@@ -75,13 +89,14 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
             </Link>
           </motion.div>
 
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-            <div className="space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-12 text-center md:text-left">
+            {/* Left Column: Business Name & Category (60%) */}
+            <div className="md:w-[60%] space-y-4">
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="inline-flex items-center px-3 py-1 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-md shadow-lg shadow-red-900/20"
+                className="inline-flex items-center px-4 py-1.5 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-md shadow-lg shadow-red-900/40"
               >
                 {b.category || "General"}
               </motion.div>
@@ -89,16 +104,48 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.8 }}
-                className="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight"
+                className="text-5xl md:text-7xl font-black text-white tracking-tight leading-tight"
               >
                 {b.brand_name || "Unnamed Business"}
               </motion.h1>
+            </div>
+
+            {/* Right Column: Logo & Tagline (40%) */}
+            <div className="md:w-[40%] flex flex-col items-center gap-6">
+              {b.logo_url ? (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0, rotateY: 15 }}
+                  animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                  transition={{ delay: 0.35, duration: 0.8 }}
+                  className="w-32 h-32 md:w-44 md:h-44 rounded-3xl bg-white/10 backdrop-blur-xl p-3 border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex-shrink-0 flex items-center justify-center relative group overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative w-full h-full rounded-2xl overflow-hidden bg-white p-2">
+                    <Image 
+                      src={b.logo_url} 
+                      alt={b.brand_name || "Logo"} 
+                      fill 
+                      className="object-contain"
+                    />
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.35 }}
+                  className="w-32 h-32 md:w-44 md:h-44 rounded-3xl bg-blue-900 border-2 border-blue-400/30 flex items-center justify-center text-5xl font-black text-white shadow-2xl flex-shrink-0"
+                >
+                  {b.brand_name?.charAt(0) || b.owner_name?.charAt(0) || "Y"}
+                </motion.div>
+              )}
+
               {b.tagline && (
                 <motion.p 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.6 }}
-                  className="text-xl text-blue-100 italic font-light"
+                  className="text-lg md:text-xl text-blue-100 italic font-light tracking-wide text-center"
                 >
                   "{b.tagline}"
                 </motion.p>
@@ -217,15 +264,13 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
                 </div>
 
                 <div className="space-y-4">
-                  <motion.a 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    href={`mailto:${b.contact_email}`}
-                    className="w-full inline-flex items-center justify-center p-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-red-600/30 text-lg"
+                  <button 
+                    onClick={() => setIsEnquiryModalOpen(true)}
+                    className="w-full inline-flex items-center justify-center p-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-red-600/30 text-lg cursor-pointer"
                   >
                     <Mail className="w-5 h-5 mr-3" />
                     Enquire Now
-                  </motion.a>
+                  </button>
                   
                   <div className="pt-4 space-y-3">
                     {b.contact_email && (
@@ -260,6 +305,13 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
 
         </div>
       </main>
+
+      <EnquiryModal 
+        isOpen={isEnquiryModalOpen} 
+        onClose={() => setIsEnquiryModalOpen(false)}
+        businessId={b.id}
+        businessName={b.brand_name || "this business"}
+      />
     </div>
   );
 }
