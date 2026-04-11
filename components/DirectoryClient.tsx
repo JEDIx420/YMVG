@@ -4,9 +4,11 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Business } from '@/types/database.types';
 import { getEmbedding } from '@/app/actions/getEmbedding';
-import { Search, ArrowRight, Briefcase } from 'lucide-react';
+import { performHybridSearch, SearchResult, getUniqueCategories } from '@/app/actions/search';
+import { Search, ArrowRight, Briefcase, Sparkles, Filter, XCircle, ChevronDown, CheckCircle2, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Highlight } from '@/components/ui/Highlight';
 
 // --- Skeleton Loader Component ---
 const CardSkeleton = () => (
@@ -32,41 +34,100 @@ export default function DirectoryClient({
 }: { 
   initialBusinesses: Business[] 
 }) {
-  const [businesses, setBusinesses] = useState<Business[]>(initialBusinesses);
+  const [businesses, setBusinesses] = useState<(Business | SearchResult)[]>(initialBusinesses);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [availableCategories, setAvailableCategories] = useState<string[]>(['All']);
   const [isSearching, setIsSearching] = useState(false);
+  const [isWideSearch, setIsWideSearch] = useState(false);
+  const [manualSearchPerformed, setManualSearchPerformed] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) {
+  // Fetch unique categories from database on mount
+  React.useEffect(() => {
+    const fetchCats = async () => {
+      const cats = await getUniqueCategories();
+      setAvailableCategories(['All', ...cats]);
+    };
+    fetchCats();
+  }, []);
+
+  const executeSearch = async (query: string, category: string, isManual: boolean) => {
+    // Stage 0: Empty Reset Logic
+    if (!query.trim() && category === 'All') {
       setBusinesses(initialBusinesses);
+      setIsWideSearch(false);
+      setManualSearchPerformed(false);
       return;
     }
     
     setIsSearching(true);
+    setIsWideSearch(false);
+    if (isManual) setManualSearchPerformed(true);
     
     try {
-      const queryEmbedding = await getEmbedding(searchQuery);
-      if (!queryEmbedding) {
-        throw new Error("Failed to generate embedding via NVIDIA NIM");
-      }
-
-      const { data, error } = await supabase.rpc('match_businesses', {
-        query_embedding: queryEmbedding,
-        query_text: searchQuery,
-        match_count: 12
-      });
-
-      if (!error && data) {
-        setBusinesses(data as Business[]);
+      const results = await performHybridSearch(query, category);
+      
+      // Automatic Fallback: Wide Search (Only if keyword search failed)
+      if (results.length === 0 && category !== 'All') {
+        setIsWideSearch(true);
+        const wideResults = await performHybridSearch(query, 'All');
+        setBusinesses(wideResults);
       } else {
-        console.error("RPC Error:", error);
+        setBusinesses(results);
       }
     } catch (err) {
-      console.error("Search Error:", err);
+      console.error("Search failed:", err);
     } finally {
       setIsSearching(false);
     }
+  };
+
+  // Immediate Category Reactivity
+  React.useEffect(() => {
+    // Avoid double search on mount if initial state is already set
+    // But we need it for immediate pivot if category changes
+    executeSearch(searchQuery, selectedCategory, false);
+  }, [selectedCategory]);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await executeSearch(searchQuery, selectedCategory, true);
+  };
+
+  // Helper to determine match reason for Semantic Highlighting
+  const getMatchReason = (business: Business | SearchResult) => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return null;
+
+    // 1. Intent Match (User selected a category or query matches category name)
+    const isCategorySelected = selectedCategory !== 'All' && business.category === selectedCategory;
+    const isQueryCategory = business.category?.toLowerCase().includes(query);
+    
+    if (isCategorySelected || isQueryCategory) {
+      return { 
+        text: `Matches intent: ${business.category}`, 
+        icon: <Zap className="w-3 h-3 text-amber-500" />,
+        type: 'intent'
+      };
+    }
+
+    // 2. Keyword Match
+    const inBrand = business.brand_name?.toLowerCase().includes(query);
+    const inDesc = business.description?.toLowerCase().includes(query);
+    if (inBrand || inDesc) {
+      return { 
+        text: "Keyword match found", 
+        icon: <CheckCircle2 className="w-3 h-3 text-blue-500" />,
+        type: 'keyword'
+      };
+    }
+
+    // 3. Semantic Match (Vector similarity)
+    return { 
+      text: "Semantic vector match", 
+      icon: <Sparkles className="w-3 h-3 text-purple-500" />,
+      type: 'semantic'
+    };
   };
 
   const handleAdminSync = async () => {
@@ -142,29 +203,54 @@ export default function DirectoryClient({
             Empowering the SWIR community through member-to-member professional networking and collaboration.
           </motion.p>
 
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
+          <form onSubmit={handleSearch} className="max-w-4xl mx-auto">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="relative flex items-center group"
+              className="flex flex-col md:flex-row items-stretch gap-4"
             >
-              <div className="absolute left-5 text-slate-400 group-focus-within:text-blue-600 transition-colors">
-                <Search className="w-5 h-5" />
+              <div className="relative flex-grow group">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                  <Search className="w-5 h-5" />
+                </div>
+                <input
+                  type="text"
+                  className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all placeholder:text-slate-400 text-slate-900"
+                  placeholder="Search by keyword, brand, or service..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-              <input
-                type="text"
-                className="w-full pl-14 pr-32 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all placeholder:text-slate-400 text-slate-900"
-                placeholder="Search by keyword, industry, or service..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+
+              <div className="relative min-w-[200px] group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 pointer-events-none">
+                  <Filter className="w-4 h-4" />
+                </div>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full pl-10 pr-10 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all appearance-none text-slate-700 font-medium cursor-pointer"
+                >
+                  {availableCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={isSearching}
-                className="absolute right-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-red-600/20"
+                className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 min-w-[140px]"
               >
-                {isSearching ? '...' : 'Search'}
+                {isSearching ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>Search</>
+                )}
               </button>
             </motion.div>
           </form>
@@ -174,7 +260,23 @@ export default function DirectoryClient({
       {/* Results Grid with Shared Layout Animations */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 flex-grow">
         <div className="relative min-h-[400px]">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="wait">
+            {isWideSearch && !isSearching && manualSearchPerformed && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8 p-4 bg-blue-50/50 border border-blue-100 rounded-2xl flex items-center gap-3"
+              >
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Filter className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-blue-900">No direct matches found in {selectedCategory}</h4>
+                  <p className="text-xs text-blue-700/70">Broadening search to the whole directory to find the best recommendations for "{searchQuery}".</p>
+                </div>
+              </motion.div>
+            )}
+
             {isSearching ? (
               <motion.div 
                 key="searching"
@@ -238,19 +340,39 @@ export default function DirectoryClient({
                               </span>
                             )}
                           </motion.div>
-                          {business.category && (
-                            <span className="px-3 py-1 bg-blue-50 text-blue-800 text-xs font-bold rounded-lg border border-blue-100 uppercase">
-                              {business.category}
-                            </span>
-                          )}
+                            {business.category && (
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="px-3 py-1 bg-blue-50 text-blue-800 text-xs font-bold rounded-lg border border-blue-100 uppercase">
+                                  {business.category}
+                                </span>
+                                {('final_score' in business) && (business.final_score > 0) && (
+                                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-md border border-emerald-100">
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    {Math.round(business.final_score * 100)}% MATCH
+                                  </div>
+                                )}
+                              </div>
+                            )}
                         </div>
 
                         <h3 className="text-xl font-black text-blue-950 leading-tight mb-2 group-hover:text-blue-600 transition-colors">
                           {business.brand_name || 'Unnamed Enterprise'}
                         </h3>
 
-                        {business.tagline && (
-                          <p className="text-sm text-slate-500 italic mb-6">"{business.tagline}"</p>
+                        {business.description && (
+                          <div className="text-sm text-slate-600 line-clamp-3 mb-4 font-light leading-relaxed">
+                            <Highlight text={business.description} query={searchQuery} />
+                          </div>
+                        )}
+
+                        {/* Semantic Match Reason - UX Polish */}
+                        {getMatchReason(business) && (
+                          <div className="flex items-center gap-2 mb-6 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100 w-fit">
+                            {getMatchReason(business)?.icon}
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                              {getMatchReason(business)?.text}
+                            </span>
+                          </div>
                         )}
 
                         <div className="flex flex-wrap gap-1.5 mt-auto">
