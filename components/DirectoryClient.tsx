@@ -345,12 +345,6 @@ export default function DirectoryClient({
                                 <span className="px-3 py-1 bg-blue-50 text-blue-800 text-xs font-bold rounded-lg border border-blue-100 uppercase">
                                   {business.category}
                                 </span>
-                                {('final_score' in business) && (business.final_score > 0) && (
-                                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-md border border-emerald-100">
-                                    <Sparkles className="w-2.5 h-2.5" />
-                                    {Math.round(business.final_score * 100)}% MATCH
-                                  </div>
-                                )}
                               </div>
                             )}
                         </div>
