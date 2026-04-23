@@ -20,5 +20,6 @@ export interface Business {
   ym_region: string | null;
   ym_club: string | null;
   ym_designation: string | null;
+  imis_id: string | null;
   embedding: number[] | null;
 }

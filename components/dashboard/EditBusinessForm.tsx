@@ -185,7 +185,7 @@ export default function EditBusinessForm({ business }: EditBusinessFormProps) {
               <label className="text-sm font-bold text-blue-950">Brand Name</label>
               <input 
                 {...register("brand_name")}
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-blue-950 placeholder:text-slate-400"
+                className="w-full px-4 py-2 rounded-lg border border-slate-400 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-slate-900 placeholder:text-slate-500 bg-white"
               />
               {errors.brand_name && <p className="text-xs text-rose-600 font-medium">{errors.brand_name.message}</p>}
             </div>
@@ -195,7 +195,7 @@ export default function EditBusinessForm({ business }: EditBusinessFormProps) {
               <input 
                 {...register("tagline")}
                 placeholder="E.g. Building a better world"
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-blue-950 placeholder:text-slate-400"
+                className="w-full px-4 py-2 rounded-lg border border-slate-400 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-slate-900 placeholder:text-slate-500 bg-white"
               />
             </div>
 
@@ -203,7 +203,7 @@ export default function EditBusinessForm({ business }: EditBusinessFormProps) {
               <label className="text-sm font-bold text-blue-950">Category</label>
               <select 
                 {...register("category")}
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-blue-950 placeholder:text-slate-400"
+                className="w-full px-4 py-2 rounded-lg border border-slate-400 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-slate-900 placeholder:text-slate-500 bg-white"
               >
                 <option value="">Select a category</option>
                 {CATEGORIES.map(cat => (
@@ -217,7 +217,7 @@ export default function EditBusinessForm({ business }: EditBusinessFormProps) {
               <textarea 
                 {...register("description")}
                 rows={4}
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-blue-950 placeholder:text-slate-400"
+                className="w-full px-4 py-2 rounded-lg border border-slate-400 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-slate-900 placeholder:text-slate-500 bg-white"
                 placeholder="Tell the community about your business, history, and mission..."
               />
               {errors.description && <p className="text-xs text-rose-600 font-medium">{errors.description.message}</p>}
@@ -249,8 +249,8 @@ export default function EditBusinessForm({ business }: EditBusinessFormProps) {
                     </div>
                   )}
                 </div>
-                <label className="cursor-pointer px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold transition-colors flex items-center gap-2">
-                  <Upload className="w-4 h-4" />
+                <label className="cursor-pointer px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95 flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-white" />
                   Upload Logo
                   <input 
                     type="file" 
@@ -276,8 +276,8 @@ export default function EditBusinessForm({ business }: EditBusinessFormProps) {
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                   </div>
                 )}
-                <label className="absolute bottom-4 right-4 cursor-pointer px-4 py-2 bg-white/90 hover:bg-white rounded-lg text-sm font-bold shadow-lg transition-colors flex items-center gap-2">
-                  <Upload className="w-4 h-4" />
+                <label className="absolute bottom-4 right-4 cursor-pointer px-5 py-2.5 bg-white hover:bg-slate-50 text-blue-600 rounded-xl text-sm font-bold shadow-xl border border-slate-200 transition-all active:scale-95 flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-blue-600" />
                   Select Image
                   <input 
                     type="file" 
@@ -306,7 +306,7 @@ export default function EditBusinessForm({ business }: EditBusinessFormProps) {
                   <input 
                     {...register(`services.${index}.value` as const)}
                     placeholder="E.g. Web Design"
-                    className="flex-1 px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="flex-1 px-4 py-2 rounded-lg border border-slate-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-900 placeholder:text-slate-500 bg-white"
                   />
                   {fields.length > 1 && (
                     <button 
@@ -335,7 +335,7 @@ export default function EditBusinessForm({ business }: EditBusinessFormProps) {
             <input 
               {...register("special_offer")}
               placeholder="E.g. 15% off for YMI Members"
-              className="w-full px-4 py-2 rounded-lg border border-amber-200 bg-amber-50/30 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+              className="w-full px-4 py-2 rounded-lg border border-amber-300 bg-amber-50/50 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-slate-900 placeholder:text-amber-700/50 font-medium"
             />
           </div>
         </section>
@@ -353,7 +353,7 @@ export default function EditBusinessForm({ business }: EditBusinessFormProps) {
               <input 
                 {...register("website_url")}
                 placeholder="https://example.com"
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-blue-950 placeholder:text-slate-400"
+                className="w-full px-4 py-2 rounded-lg border border-slate-400 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-slate-900 placeholder:text-slate-500 bg-white"
               />
               {errors.website_url && <p className="text-xs text-rose-600 font-medium">{errors.website_url.message}</p>}
             </div>
@@ -363,7 +363,7 @@ export default function EditBusinessForm({ business }: EditBusinessFormProps) {
               <input 
                 {...register("contact_phone")}
                 placeholder="+91 0000 000000"
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-blue-950 placeholder:text-slate-400"
+                className="w-full px-4 py-2 rounded-lg border border-slate-400 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-slate-900 placeholder:text-slate-500 bg-white"
               />
             </div>
           </div>

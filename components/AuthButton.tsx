@@ -2,21 +2,10 @@
 
 import { createClient } from '@/utils/supabase/client'
 import { User } from '@supabase/supabase-js'
-import { useState } from 'react'
+import Link from 'next/link'
 
 export default function AuthButton({ user }: { user: User | null }) {
   const supabase = createClient()
-  const [loading, setLoading] = useState(false)
-
-  const handleSignIn = async () => {
-    setLoading(true)
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${location.origin}/auth/callback`,
-      },
-    })
-  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -40,12 +29,11 @@ export default function AuthButton({ user }: { user: User | null }) {
   }
 
   return (
-    <button
-      onClick={handleSignIn}
-      disabled={loading}
-      className={`bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow transition-colors ${loading ? 'opacity-50' : ''}`}
+    <Link
+      href="/login"
+      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow transition-colors"
     >
-      {loading ? 'Redirecting...' : 'Sign In with Google'}
-    </button>
+      Member Login
+    </Link>
   )
 }
