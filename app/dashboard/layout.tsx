@@ -16,7 +16,19 @@ export default async function DashboardLayout({
     redirect('/login'); // We should redirect to the new login page, not root.
   }
 
-  // Check 2: VIP Flow Validation
+  // Better VIP Flow Validation:
+  // First, check if they already have an established link
+  const { data: ownedBusiness } = await supabase
+    .from('businesses')
+    .select('id')
+    .eq('owner_id', user.id)
+    .maybeSingle();
+
+  if (ownedBusiness) {
+    // Already verified and linked. Grant passage.
+    return <>{children}</>;
+  }
+
   // Read the cookie. If it's not present, we assume they bypassed the IMIS check.
   const cookieStore = await cookies();
   const imisId = cookieStore.get('imis_id')?.value;
@@ -28,7 +40,6 @@ export default async function DashboardLayout({
   }
 
   // Use the cookie to find the matching business with this email.
-  // Note: user.email could be undefined for phone signups, but we use Google OAuth so it's guaranteed.
   const { data: match, error } = await supabase
     .from('businesses')
     .select('id, owner_id')
@@ -43,17 +54,14 @@ export default async function DashboardLayout({
   }
 
   // The Match was Successful!
-  // Self-Healing: If owner_id is empty, link this business to the user
-  if (!match.owner_id) {
-    await supabase
-      .from('businesses')
-      .update({ owner_id: user.id, owner_name: user.user_metadata?.full_name || null })
-      .eq('id', match.id);
-  }
+  // Link this business to the user
+  await supabase
+    .from('businesses')
+    .update({ owner_id: user.id, owner_name: user.user_metadata?.full_name || null })
+    .eq('id', match.id);
 
-  // Clear the imis_id cookie, we have validated them for this session
-  // Setting Max-Age to 0 essentially deletes the cookie
-  cookieStore.set('imis_id', '', { maxAge: 0, path: '/' });
-
+  // Note: We cannot clear the cookie in a Server Component rendering phase.
+  // We simply let it naturally expire in 15 mins. Since they now have an owner_id, 
+  // they will bypass this cookie check on future visits anyway.
   return <>{children}</>;
 }
