@@ -135,7 +135,7 @@ export default function LandingPage() {
                 A Century of Fellowship
               </motion.h2>
               <motion.p variants={itemVariants} className="text-xl text-gray-600 leading-relaxed font-light">
-                Founded in 1922, Y's Men International operates in over 70 countries. As the acknowledged partner of the YMCA, 
+                Founded in 1922, Y's Men International operates in over 80 countries. As the acknowledged partner of the YMCA, 
                 our movement strives to develop, encourage, and provide leadership to build a better world for all humankind.
               </motion.p>
               <motion.div variants={itemVariants} className="pt-4">
@@ -155,7 +155,7 @@ export default function LandingPage() {
               className="grid grid-cols-2 gap-6"
             >
               {[
-                { label: "70+ Nations", icon: Globe, highlight: "Global Network" },
+                { label: "80+ Nations", icon: Globe, highlight: "Global Network" },
                 { label: "100+ Years", icon: Clock, highlight: "Rich Heritage" },
                 { label: "Dedicated", icon: Heart, highlight: "To Service" },
                 { label: "Partnered", icon: Handshake, highlight: "With YMCA" },
@@ -164,13 +164,13 @@ export default function LandingPage() {
                   key={i} 
                   variants={itemVariants}
                   whileHover={{ scale: 1.05, rotateZ: 1 }}
-                  className="group p-8 bg-slate-50 rounded-3xl border border-gray-100 hover:bg-blue-950 transition-all duration-300 shadow-sm hover:shadow-xl"
+                  className="group p-5 md:p-8 bg-slate-50 rounded-2xl md:rounded-3xl border border-gray-100 hover:bg-blue-950 transition-all duration-300 shadow-sm hover:shadow-xl flex flex-col justify-center"
                 >
-                  <stat.icon className="w-8 h-8 text-blue-600 mb-6 group-hover:text-blue-400 transition-colors" />
-                  <p className="text-3xl font-black text-blue-950 group-hover:text-white mb-2 tracking-tighter transition-colors">
+                  <stat.icon className="w-6 h-6 md:w-8 md:h-8 text-blue-600 mb-4 md:mb-6 group-hover:text-blue-400 transition-colors" />
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-black text-blue-950 group-hover:text-white mb-1 md:mb-2 tracking-tighter transition-colors break-words">
                     {stat.label}
                   </p>
-                  <p className="text-sm text-gray-500 group-hover:text-blue-200 font-medium uppercase tracking-wide transition-colors">
+                  <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 group-hover:text-blue-200 font-medium uppercase tracking-wide transition-colors break-words line-clamp-2">
                     {stat.highlight}
                   </p>
                 </motion.div>

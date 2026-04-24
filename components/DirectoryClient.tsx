@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase/client';
 import { Business } from '@/types/database.types';
 import { getEmbedding } from '@/app/actions/getEmbedding';
 import { performHybridSearch, SearchResult, getUniqueCategories } from '@/app/actions/search';
-import { Search, ArrowRight, Briefcase, Sparkles, Filter, XCircle, ChevronDown, CheckCircle2, Zap } from 'lucide-react';
+import { syncAllVectors } from '@/app/actions/sync';
+import { Search, SearchX, ArrowRight, Briefcase, Sparkles, Filter, XCircle, ChevronDown, CheckCircle2, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Highlight } from '@/components/ui/Highlight';
@@ -41,6 +42,7 @@ export default function DirectoryClient({
   const [isSearching, setIsSearching] = useState(false);
   const [isWideSearch, setIsWideSearch] = useState(false);
   const [manualSearchPerformed, setManualSearchPerformed] = useState(false);
+  const [isSyncing, startSync] = React.useTransition();
 
   // Fetch unique categories from database on mount
   React.useEffect(() => {
@@ -130,37 +132,19 @@ export default function DirectoryClient({
     };
   };
 
-  const handleAdminSync = async () => {
-    const { data, error } = await supabase
-      .from('businesses')
-      .select('*')
-      .is('embedding', null);
-      
-    if (error || !data) {
-      alert('Error fetching records without embeddings');
-      return;
-    }
-
-    if (data.length === 0) {
-      alert('All businesses already have embeddings!');
-      return;
-    }
-    
-    alert(`Found ${data.length} records. Syncing via NIM...`);
-    
-    for (const b of data as Business[]) {
+  const handleAdminSync = () => {
+    startSync(async () => {
       try {
-        const textToEmbed = `${b.brand_name || ''} ${b.category || ''} ${(b.services || []).join(' ')} ${b.description || ''}`;
-        const embedding = await getEmbedding(textToEmbed);
-        
-        if (embedding) {
-          await supabase.from('businesses').update({ embedding }).eq('id', b.id);
+        const res = await syncAllVectors();
+        if (res.success) {
+          alert(`Success: ${res.message}`);
+        } else {
+          alert(`Error: ${res.message}`);
         }
       } catch (err) {
-        console.error(`Sync iteration error:`, err);
+        alert("A fatal error occurred during sync.");
       }
-    }
-    alert("Sync complete!");
+    });
   };
 
   return (
@@ -295,12 +279,27 @@ export default function DirectoryClient({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200"
+                className="flex flex-col items-center justify-center py-16 text-center"
               >
                 <div className="inline-flex items-center justify-center p-4 bg-slate-50 rounded-full mb-4">
-                  <Search className="w-8 h-8 text-slate-300" />
+                  <SearchX className="w-12 h-12 text-slate-300" />
                 </div>
-                <p className="text-slate-500 font-medium">No matches found. Try a different industry or keyword.</p>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">
+                  No results found {searchQuery ? `for "${searchQuery}"` : ""}
+                </h3>
+                <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
+                  We couldn't find any businesses matching your search. Try adjusting your keywords or browsing by category.
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('All');
+                    executeSearch('', 'All', false);
+                  }}
+                  className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-all shadow-sm active:scale-95"
+                >
+                  Clear Search
+                </button>
               </motion.div>
             ) : (
               <motion.div 
@@ -401,9 +400,10 @@ export default function DirectoryClient({
         <div className="mt-20 text-center border-t border-slate-100 pt-10">
           <button
             onClick={handleAdminSync}
-            className="text-[10px] font-bold text-slate-300 hover:text-blue-600 transition-colors uppercase tracking-[0.2em]"
+            disabled={isSyncing}
+            className={`text-[10px] font-bold text-slate-300 transition-colors uppercase tracking-[0.2em] ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'hover:text-blue-600'}`}
           >
-            NEXUS Admin: Sync Vectors
+            {isSyncing ? 'SYNCING VECTORS...' : 'NEXUS Admin: Sync Vectors'}
           </button>
         </div>
       </section>

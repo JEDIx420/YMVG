@@ -15,7 +15,10 @@ export const Highlight: React.FC<HighlightProps> = ({ text, query }) => {
   const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
   if (terms.length === 0) return <>{text}</>;
 
-  const regex = new RegExp(`(${terms.join('|')})`, 'gi');
+  const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const safeTerms = terms.map(escapeRegExp);
+
+  const regex = new RegExp(`(${safeTerms.join('|')})`, 'gi');
   const parts = text.split(regex);
 
   return (

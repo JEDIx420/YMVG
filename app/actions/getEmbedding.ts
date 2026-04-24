@@ -1,6 +1,6 @@
 "use server";
 
-export async function getEmbedding(text: string): Promise<number[] | null> {
+export async function getEmbedding(text: string, inputType: "query" | "passage" = "query"): Promise<number[] | null> {
   const apiKey = process.env.NVIDIA_API_KEY;
   if (!apiKey) {
     throw new Error('NVIDIA_API_KEY environment variable is not set');
@@ -15,7 +15,7 @@ export async function getEmbedding(text: string): Promise<number[] | null> {
     body: JSON.stringify({
       input: [text],
       model: "nvidia/llama-3.2-nemoretriever-300m-embed-v1",
-      input_type: "query",
+      input_type: inputType,
       encoding_format: "float",
       truncate: "NONE"
     })

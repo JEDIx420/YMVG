@@ -27,7 +27,7 @@ export async function addBusiness(
 
     // 2. Generate AI Vector Embedding
     console.log("Vectorizing new business entry...");
-    const embedding = await getEmbedding(richText);
+    const embedding = await getEmbedding(richText, "passage");
 
     if (!embedding) {
       return { 

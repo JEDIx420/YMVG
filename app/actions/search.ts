@@ -51,15 +51,19 @@ export async function performHybridSearch(
       }));
     }
 
-    // Stage 2: Hybrid Search with AI & Vector RPC (IF text is present)
-    const queryEmbedding = await getEmbedding(trimmedQuery);
+    let queryEmbedding: number[] | null = null;
+    try {
+      queryEmbedding = await getEmbedding(trimmedQuery);
+    } catch (err) {
+      console.error("Error during embedding generation:", err);
+    }
+
     if (!queryEmbedding) {
-      console.error("Failed to generate embedding for search");
-      return [];
+      console.warn("Semantic search unavailable, falling back to FTS");
     }
 
     const { data, error } = await supabase.rpc('hybrid_search_businesses', {
-      query_embedding: queryEmbedding,
+      query_embedding: queryEmbedding || null,
       query_text: trimmedQuery,
       category_filter: category === 'All' ? null : category,
       match_count: 20
