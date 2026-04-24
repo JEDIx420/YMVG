@@ -8,28 +8,28 @@ export async function sendAccessRequest(formData: FormData): Promise<{ success: 
     
     const name = formData.get("name") as string;
     const phone = formData.get("phone") as string;
-    const club = formData.get("club") as string;
+    const location = formData.get("location") as string;
     const email = formData.get("email") as string;
     
-    if (!name || !phone || !club || !email) {
+    if (!name || !phone || !location || !email) {
       return { success: false, error: "Please provide all required fields." };
     }
 
+    const sender = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+
     const { error } = await resend.emails.send({
-      from: "YMI Directory <noreply@ymiswir.com>", // Update domain as needed
-      to: "admin@ymiswir.com",
-      subject: "New Dashboard Access Request - VIP Bouncer Match Failure",
+      from: `YMI Directory <${sender}>`,
+      to: "jayanand.jayakumar@gmail.com",
+      subject: "New Y's Men Enrollment Application",
       html: `
-        <h2>New Access Request</h2>
-        <p>A member has failed the VIP matching step and requested manual verification.</p>
+        <h2>New Y's Men Application</h2>
+        <p>A person has requested access to become a Y's Men member. Please review their details and contact them if interested.</p>
         <ul>
           <li><strong>Name:</strong> ${name}</li>
-          <li><strong>Google OAuth Email used:</strong> ${email}</li>
+          <li><strong>Email:</strong> ${email}</li>
           <li><strong>Phone:</strong> ${phone}</li>
-          <li><strong>YMI Club:</strong> ${club}</li>
+          <li><strong>Location/Address:</strong> ${location}</li>
         </ul>
-        <br/>
-        <p>Please cross-reference this information with the pre-populated businesses sheet to verify their identity and update their contact_email appropriately.</p>
       `,
     });
 

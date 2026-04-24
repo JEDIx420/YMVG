@@ -74,8 +74,19 @@ export async function performHybridSearch(
       return [];
     }
 
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Dynamic Relational Drop-off Filter
+    const topScore = data[0].final_score;
+    const DROPOFF_THRESHOLD = 0.50;
+    const minimumAcceptableScore = topScore * DROPOFF_THRESHOLD;
+    
+    const filteredResults = data.filter((business: any) => business.final_score >= minimumAcceptableScore);
+
     // Stage 3: Score Normalization (RRF max is 1/61, so multiply by 61 for UI %)
-    return (data as SearchResult[]).map(b => ({
+    return (filteredResults as SearchResult[]).map(b => ({
       ...b,
       final_score: Math.min(b.final_score * 61, 1.0)
     }));
