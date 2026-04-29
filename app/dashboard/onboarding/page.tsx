@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createClient } from "@/utils/supabase/client";
+import { getEmbedding } from "@/app/actions/getEmbedding";
 import { 
   Loader2, 
   Upload, 
@@ -164,12 +165,32 @@ export default function OnboardingPage() {
         brochure_url: brochureUrl || null,
       };
 
-      const { error } = await supabase
+      const { data: insertedBusiness, error } = await supabase
         .from('businesses')
-        .insert([payload]);
+        .insert([payload])
+        .select('id')
+        .single();
 
       if (error) {
         throw error;
+      }
+
+      try {
+        const passageText = `${data.brand_name} - ${data.category}: ${data.description}`;
+        const vector = await getEmbedding(passageText, "passage");
+
+        if (vector) {
+          const { error: updateError } = await supabase
+            .from('businesses')
+            .update({ embedding: vector })
+            .eq('id', insertedBusiness.id);
+
+          if (updateError) {
+            console.error("Failed to update embedding:", updateError);
+          }
+        }
+      } catch (embError) {
+        console.error("Error generating/saving embedding:", embError);
       }
 
       setStatus({ type: "success", message: "Business profile created successfully! Redirecting..." });
