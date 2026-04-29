@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import EditBusinessForm from "@/components/dashboard/EditBusinessForm";
 import Link from "next/link";
-import { ExternalLink, LayoutDashboard } from "lucide-react";
+import { ExternalLink, Briefcase } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -29,20 +29,19 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {!business ? (
-          <div className="bg-white shadow-xl rounded-2xl p-12 text-center border border-slate-100 max-w-2xl mx-auto">
-            <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <LayoutDashboard className="w-10 h-10 text-slate-400" />
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+            <div className="bg-slate-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Briefcase className="w-12 h-12 text-slate-400" />
             </div>
-            <h1 className="text-3xl font-black text-blue-950 mb-4">No Business Registered</h1>
-            <p className="text-slate-600 leading-relaxed mb-8">
-              We couldn't find a pre-registered YMI business linked to your email address (<strong>{user.email}</strong>). 
-              The directory is currently invitation-only for existing SWIR members.
+            <h2 className="text-3xl font-black text-blue-950 mb-4">Welcome to the YMI Business Directory</h2>
+            <p className="text-slate-500 text-lg leading-relaxed mb-8 max-w-lg">
+              You haven't set up your business profile yet. Create one now to get discovered by the SWIR community.
             </p>
             <Link 
-              href="/" 
+              href="/dashboard/onboarding" 
               className="inline-flex items-center justify-center px-8 py-3 bg-blue-950 text-white rounded-full font-bold hover:bg-black transition-all"
             >
-              Return to Homepage
+              Create Your Business Profile
             </Link>
           </div>
         ) : (
