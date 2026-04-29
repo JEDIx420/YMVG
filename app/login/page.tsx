@@ -36,12 +36,23 @@ export default function LoginPage() {
     setLoading(false);
   };
 
+  const getURL = () => {
+    let url =
+      process?.env?.NEXT_PUBLIC_SITE_URL ??
+      process?.env?.NEXT_PUBLIC_VERCEL_URL ??
+      'http://localhost:3000';
+    url = url.includes('http') ? url : `https://${url}`;
+    url = url.charAt(url.length - 1) === '/' ? url : `${url}/`;
+    return url;
+  };
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${location.origin}/auth/callback`,
+        // Use the browser's current origin dynamically to hit our callback
+        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
       },
     });
   };
