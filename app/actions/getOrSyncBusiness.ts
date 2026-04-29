@@ -10,31 +10,37 @@ export async function getOrSyncBusiness() {
     return { error: "Unauthorized" };
   }
 
-  // 1. Check if user already owns a business
-  const { data: existingOwned } = await supabase
-    .from("businesses")
-    .select("*")
-    .eq("owner_id", user.id)
+  // Step 1: Try to fetch by the proper owner_id
+  let { data: business } = await supabase
+    .from('businesses')
+    .select('*')
+    .eq('owner_id', user.id)
     .single();
 
-  if (existingOwned) {
-    return { business: existingOwned };
-  }
-
-  // 2. Try to match by email if ownership isn't set yet
-  if (user.email) {
-    const { data: matchedBusiness, error: matchError } = await supabase
-      .from("businesses")
-      .update({ owner_id: user.id })
-      .eq("contact_email", user.email)
-      .is("owner_id", null)
-      .select()
+  // Step 2: Auto-Claim Fallback
+  if (!business && user.email) {
+    // Look for an orphaned business matching their verified email
+    const { data: orphanedBusiness } = await supabase
+      .from('businesses')
+      .select('*')
+      .eq('owner_email', user.email)
+      .is('owner_id', null)
       .single();
 
-    if (!matchError && matchedBusiness) {
-      return { business: matchedBusiness };
+    if (orphanedBusiness) {
+      // Claim it: Update the database to link this UUID
+      const { data: updatedBusiness, error: updateError } = await supabase
+        .from('businesses')
+        .update({ owner_id: user.id })
+        .eq('id', orphanedBusiness.id)
+        .select()
+        .single();
+        
+      if (!updateError) {
+        business = updatedBusiness;
+      }
     }
   }
 
-  return { business: null };
+  return { business: business || null };
 }
