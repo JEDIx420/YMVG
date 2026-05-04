@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { verifyImisId } from "@/app/actions/auth";
+import { verifyImisId, verifyMemberCredentials } from "@/app/actions/auth";
 import { sendAccessRequest } from "@/app/actions/accessRequest";
 import { createClient } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -62,10 +62,20 @@ export default function LoginPage() {
 
   const handleMagicLinkLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !imisId.trim()) return;
     setIsMagicLinkLoading(true);
     setMessage('');
+
+    // SECURITY STEP 1: Pre-flight Verification
+    const isValidMember = await verifyMemberCredentials(imisId, email);
+
+    if (!isValidMember) {
+      setMessage('Error: This email does not match the registered email for this IMIS ID.');
+      setIsMagicLinkLoading(false);
+      return; // Kill the function here, do not send the email
+    }
     
+    // SECURITY STEP 2: The member is verified, send the OTP
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -77,7 +87,7 @@ export default function LoginPage() {
     if (error) {
       setMessage(`Error: ${error.message}`);
     } else {
-      setMessage('Check your email for the magic login link!');
+      setMessage('Verification successful! Check your email for the secure login link.');
     }
     setIsMagicLinkLoading(false);
   };
@@ -198,10 +208,22 @@ export default function LoginPage() {
               </p>
 
               {message && (
-                <div className={`p-3 mb-6 text-sm font-medium rounded-xl border flex items-center justify-center gap-2 ${message.startsWith('Error') ? 'bg-red-50 text-red-700 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
-                  {message.startsWith('Error') ? <AlertCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                  {message}
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-4 mb-6 text-sm font-medium rounded-2xl border flex items-start text-left gap-3 ${
+                    message.startsWith('Error') 
+                      ? 'bg-red-50/80 text-red-800 border-red-200' 
+                      : 'bg-emerald-50/80 text-emerald-800 border-emerald-200'
+                  }`}
+                >
+                  <div className="mt-0.5 shrink-0">
+                    {message.startsWith('Error') ? <AlertCircle className="w-5 h-5 text-red-600" /> : <CheckCircle className="w-5 h-5 text-emerald-600" />}
+                  </div>
+                  <p className="leading-relaxed">
+                    {message.replace(/^Error:\s*/, '')}
+                  </p>
+                </motion.div>
               )}
 
               <form onSubmit={handleMagicLinkLogin} className="space-y-4 mb-6">
