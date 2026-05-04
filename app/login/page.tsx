@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { verifyImisId, verifyMemberCredentials } from "@/app/actions/auth";
+import { verifyImisId } from "@/app/actions/auth";
+import { verifyMemberCredentials } from "@/app/actions/verifyMember";
 import { sendAccessRequest } from "@/app/actions/accessRequest";
 import { createClient } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -66,30 +67,36 @@ export default function LoginPage() {
     setIsMagicLinkLoading(true);
     setMessage('');
 
-    // SECURITY STEP 1: Pre-flight Verification
-    const isValidMember = await verifyMemberCredentials(imisId, email);
+    try {
+      // SECURITY STEP 1: Pre-flight Verification
+      const { isValid } = await verifyMemberCredentials(imisId, email);
 
-    if (!isValidMember) {
-      setMessage('Error: This email does not match the registered email for this IMIS ID.');
+      if (!isValid) {
+        setMessage('Error: This email does not match the registered email for this IMIS ID.');
+        return; // finally block will handle loading state
+      }
+      
+      // SECURITY STEP 2: The member is verified, send the OTP
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          // Point to our existing callback route
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        },
+      });
+
+      if (error) {
+        setMessage(`Error: ${error.message}`);
+      } else {
+        setMessage('Verification successful! Check your email for the secure login link.');
+      }
+    } catch (err) {
+      console.error("Magic Link Execution Error:", err);
+      setMessage('An unexpected error occurred. Please try again.');
+    } finally {
+      // GUARANTEED EXECUTION: Kill the loader
       setIsMagicLinkLoading(false);
-      return; // Kill the function here, do not send the email
     }
-    
-    // SECURITY STEP 2: The member is verified, send the OTP
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        // Point to our existing callback route
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
-      },
-    });
-
-    if (error) {
-      setMessage(`Error: ${error.message}`);
-    } else {
-      setMessage('Verification successful! Check your email for the secure login link.');
-    }
-    setIsMagicLinkLoading(false);
   };
 
   return (

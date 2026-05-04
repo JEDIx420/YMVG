@@ -10,12 +10,14 @@ export default async function OnboardingServerPage() {
     redirect('/login');
   }
 
-  // 1. Server-Side Data Fetch: get the user's existing business stub
-  const { data: existingBusiness } = await supabase
+  // Fetch the most recently updated business to extract YMI details
+  const { data: recentBusinesses } = await supabase
     .from('businesses')
-    .select('*')
+    .select('owner_phone, ym_club, ym_district, ym_zone, ym_region')
     .eq('owner_id', user.id)
-    .single();
+    .limit(1);
 
-  return <OnboardingForm initialData={existingBusiness || undefined} />;
+  const recentBusiness = recentBusinesses?.[0] || null;
+
+  return <OnboardingForm initialData={recentBusiness || undefined} />;
 }

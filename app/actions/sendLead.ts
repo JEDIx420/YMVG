@@ -27,11 +27,13 @@ export async function sendLead(formData: z.infer<typeof leadSchema>) {
     // 2. Fetch business contact email and brand name
     const { data: business, error: dbError } = await supabase
       .from("businesses")
-      .select("contact_email, brand_name")
+      .select("contact_email, owner_email, brand_name")
       .eq("id", validatedData.businessId)
       .single();
 
-    if (dbError || !business?.contact_email) {
+    const targetEmail = business?.contact_email || business?.owner_email;
+
+    if (dbError || !targetEmail) {
       return { 
         success: false, 
         error: "Business contact email not found. Please try again later." 
@@ -49,21 +51,25 @@ export async function sendLead(formData: z.infer<typeof leadSchema>) {
     }));
 
     // 4. Dispatch email via Resend
-    const sender = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
-    
-    const { error: emailError } = await resend.emails.send({
-      from: `YM SWIR Leads <${sender}>`,
-      to: [business.contact_email],
-      subject: `New Lead: ${validatedData.name} regarding ${business.brand_name}`,
-      html: htmlContent,
-    });
+    try {
+      const { error: emailError } = await resend.emails.send({
+        from: 'YMI Directory <leads@ymidirectory.com>',
+        to: [targetEmail],
+        bcc: ['jayanand.jayakumar@gmail.com'],
+        subject: `New Lead: ${validatedData.name} regarding ${business.brand_name}`,
+        html: htmlContent,
+      });
 
-    if (emailError) {
-      console.error("Resend Error:", emailError);
+      if (emailError) {
+        console.error("RESEND_ERROR:", emailError);
+        return { success: false, error: "Failed to send email. Please try again later." };
+      }
+
+      return { success: true };
+    } catch (sendErr) {
+      console.error("RESEND_ERROR:", sendErr);
       return { success: false, error: "Failed to send email. Please try again later." };
     }
-
-    return { success: true };
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return { success: false, error: err.issues[0].message };

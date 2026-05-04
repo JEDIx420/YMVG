@@ -258,7 +258,13 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
                     <div>
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Affiliation</p>
                       <p className="text-blue-950 font-bold">{b.ym_club} Club</p>
-                      <p className="text-sm text-slate-500">{b.ym_region} Region</p>
+                      <p className="text-sm text-slate-500 leading-relaxed mt-1">
+                        {[
+                          b.ym_district && `District ${b.ym_district}`,
+                          b.ym_zone && `Zone ${b.ym_zone}`,
+                          b.ym_region && `${b.ym_region} Region`
+                        ].filter(Boolean).join(' • ')}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -271,6 +277,17 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
                     <Mail className="w-5 h-5 mr-3" />
                     Enquire Now
                   </button>
+
+                  {b.brochure_url && (
+                    <a 
+                      href={b.brochure_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="w-full inline-flex items-center justify-center p-3.5 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold rounded-2xl transition-all shadow-sm text-base cursor-pointer"
+                    >
+                      Download Brochure
+                    </a>
+                  )}
                   
                   <div className="pt-4 space-y-3">
                     {b.contact_email && (

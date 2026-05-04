@@ -18,8 +18,12 @@ export interface Business {
   gallery_urls: string[] | null; // JSONB
   sponsorship_tier: number | null;
   ym_region: string | null;
+  ym_zone?: string | null;
+  ym_district?: string | null;
   ym_club: string | null;
   ym_designation: string | null;
   imis_id: string | null;
   embedding: number[] | null;
+  brochure_url?: string | null;
+  owner_email?: string | null;
 }
