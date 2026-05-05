@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getEmbedding } from "./getEmbedding";
 import { Business } from "@/types/database.types";
+import { generateBusinessVector } from "@/utils/ai/vector-generator";
 
 export async function addBusiness(
   payload: Omit<Business, 'id' | 'embedding'>
@@ -22,29 +23,10 @@ export async function addBusiness(
   );
 
   try {
-    // 1. Synthesize text for vectorization
-    const richText = `${payload.brand_name || ''} in ${payload.category || 'General'}. ${payload.description || ''}. Services: ${(payload.services || []).join(', ')}`;
-
-    // 2. Generate AI Vector Embedding
-    console.log("Vectorizing new business entry...");
-    const embedding = await getEmbedding(richText, "passage");
-
-    if (!embedding) {
-      return { 
-        success: false, 
-        error: "AI Vectorization failed. Please check your AI API key and networking." 
-      };
-    }
-
-    // 3. Insert into Database with Embedding
+    // 1. Insert into Database WITHOUT Embedding
     const { data, error } = await supabase
       .from('businesses')
-      .insert([
-        {
-          ...payload,
-          embedding
-        }
-      ])
+      .insert([payload])
       .select('id')
       .single();
 
@@ -53,7 +35,29 @@ export async function addBusiness(
       return { success: false, error: error.message };
     }
 
-    return { success: true, id: data.id };
+    const newBusinessId = data.id;
+
+    // 2. Generate and save AI Vector Embedding
+    console.log("Vectorizing new business entry...");
+    try {
+      const vector = await generateBusinessVector(payload);
+      if (vector) {
+        const { error: vectorError } = await supabase
+          .from('businesses')
+          .update({ embedding: vector })
+          .eq('id', newBusinessId);
+        
+        if (vectorError) {
+          console.error("Failed to save vector embedding:", vectorError);
+        }
+      } else {
+        console.warn("AI Vectorization returned null, business created without embedding.");
+      }
+    } catch (vectorError) {
+      console.error("Error generating/saving embedding:", vectorError);
+    }
+
+    return { success: true, id: newBusinessId };
   } catch (err) {
     console.error("addBusiness pipeline failed:", err);
     return { success: false, error: "An unexpected error occurred during the business submission." };

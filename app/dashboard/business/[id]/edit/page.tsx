@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
-import OnboardingForm from "@/app/dashboard/onboarding/OnboardingForm";
+import BusinessProfileForm from "@/components/forms/BusinessProfileForm";
 
 type Params = Promise<{ id: string }>;
 
@@ -27,5 +27,5 @@ export default async function EditBusinessPage(props: { params: Params }) {
     redirect('/dashboard');
   }
 
-  return <OnboardingForm initialData={business} />;
+  return <BusinessProfileForm mode="edit" initialData={business} />;
 }

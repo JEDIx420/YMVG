@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
-import OnboardingForm from "./OnboardingForm";
+import BusinessProfileForm from "@/components/forms/BusinessProfileForm";
 
 export default async function OnboardingServerPage() {
   const supabase = await createClient();
@@ -19,5 +19,5 @@ export default async function OnboardingServerPage() {
 
   const recentBusiness = recentBusinesses?.[0] || null;
 
-  return <OnboardingForm initialData={recentBusiness || undefined} />;
+  return <BusinessProfileForm mode="create" initialData={recentBusiness || undefined} />;
 }

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { generateBusinessVector } from "@/utils/ai/vector-generator";
 
 export async function updateBusiness(businessId: string, formData: any) {
   const supabase = await createClient();
@@ -39,7 +40,14 @@ export async function updateBusiness(businessId: string, formData: any) {
       special_offer: formData.special_offer,
       website_url: formData.website_url,
       contact_phone: formData.contact_phone,
+      contact_email: formData.contact_email,
+      address: formData.address,
+      ym_region: formData.ym_region,
+      ym_district: formData.ym_district,
+      ym_zone: formData.ym_zone,
+      ym_club: formData.ym_club,
       logo_url: formData.logo_url,
+      brochure_url: formData.brochure_url,
       primary_image_url: formData.primary_image_url,
     })
     .eq("id", businessId);
@@ -49,7 +57,24 @@ export async function updateBusiness(businessId: string, formData: any) {
     return { error: "Failed to update business profile. Please try again." };
   }
 
-  // 4. Invalidate cache for directory and spotlight pages
+  // 4. Generate and save AI Vector Embedding
+  try {
+    const vector = await generateBusinessVector(formData);
+    if (vector) {
+      const { error: vectorError } = await supabase
+        .from("businesses")
+        .update({ embedding: vector })
+        .eq("id", businessId);
+      
+      if (vectorError) {
+        console.error("Failed to update vector embedding:", vectorError);
+      }
+    }
+  } catch (vectorError) {
+    console.error("Error during vector generation:", vectorError);
+  }
+
+  // 5. Invalidate cache for directory and spotlight pages
   revalidatePath("/directory");
   revalidatePath(`/directory/${businessId}`);
   revalidatePath("/dashboard");

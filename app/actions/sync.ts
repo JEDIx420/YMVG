@@ -3,7 +3,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getEmbedding } from "@/app/actions/getEmbedding";
-
+import { generateBusinessVector } from "@/utils/ai/vector-generator";
 export async function syncAllVectors(): Promise<{ success: boolean; message?: string; count?: number }> {
   try {
     const cookieStore = await cookies();
@@ -32,11 +32,7 @@ export async function syncAllVectors(): Promise<{ success: boolean; message?: st
     let successCount = 0;
 
     for (const business of businesses) {
-      // Synthesize text
-      const richText = `${business.brand_name || ''} in ${business.category || 'General'}. ${business.description || ''}. Services: ${(business.services || []).join(', ')}`;
-      
-      // Fetch new embedding as 'passage'
-      const embedding = await getEmbedding(richText, "passage");
+      const embedding = await generateBusinessVector(business);
 
       if (embedding) {
         const { error: updateError } = await supabase
@@ -58,5 +54,52 @@ export async function syncAllVectors(): Promise<{ success: boolean; message?: st
   } catch (error) {
     console.error("syncAllVectors encountered an error:", error);
     return { success: false, message: "An unexpected error occurred during sync." };
+  }
+}
+
+export async function syncSingleVector(businessId: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
+
+    const { data: business, error: fetchError } = await supabase
+      .from('businesses')
+      .select('id, brand_name, category, description, services')
+      .eq('id', businessId)
+      .single();
+
+    if (fetchError || !business) {
+      return { success: false, message: "Failed to fetch business." };
+    }
+
+    const embedding = await generateBusinessVector(business);
+
+    if (embedding) {
+      const { error: updateError } = await supabase
+        .from('businesses')
+        .update({ embedding })
+        .eq('id', business.id);
+
+      if (updateError) {
+        console.error(`Failed to update vector for business ${business.id}:`, updateError);
+        return { success: false, message: "Failed to update embedding in database." };
+      }
+      return { success: true, message: "Vector synced successfully." };
+    } else {
+      return { success: false, message: "Failed to generate embedding." };
+    }
+  } catch (error) {
+    console.error("syncSingleVector encountered an error:", error);
+    return { success: false, message: "An unexpected error occurred." };
   }
 }

@@ -6,7 +6,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createClient } from "@/utils/supabase/client";
-import { getEmbedding } from "@/app/actions/getEmbedding";
+import { addBusiness } from "@/app/actions/addBusiness";
+import { updateBusiness } from "@/app/actions/updateBusiness";
+import { Business } from "@/types/database.types";
 import { 
   Loader2, 
   Upload, 
@@ -48,15 +50,21 @@ const onboardingSchema = z.object({
   special_offer: z.string().optional(),
 });
 
-type OnboardingFormValues = z.infer<typeof onboardingSchema>;
+type BusinessFormValues = z.infer<typeof onboardingSchema>;
 
-export default function OnboardingForm({ initialData }: { initialData?: any }) {
+interface BusinessProfileFormProps {
+  mode: 'create' | 'edit';
+  initialData?: Partial<Business> | null;
+}
+
+export default function BusinessProfileForm({ mode, initialData }: BusinessProfileFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState<{ [key: string]: boolean }>({});
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [logoUrl, setLogoUrl] = useState(initialData?.logo_url || "");
   const [brochureUrl, setBrochureUrl] = useState(initialData?.brochure_url || "");
+  const [primaryImageUrl, setPrimaryImageUrl] = useState(initialData?.primary_image_url || "");
 
   const supabase = createClient();
 
@@ -64,7 +72,7 @@ export default function OnboardingForm({ initialData }: { initialData?: any }) {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<OnboardingFormValues>({
+  } = useForm<BusinessFormValues>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
       brand_name: initialData?.brand_name || "",
@@ -84,7 +92,7 @@ export default function OnboardingForm({ initialData }: { initialData?: any }) {
     },
   });
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, bucket: string, field: "logo_url" | "brochure_url") => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, bucket: string, field: "logo_url" | "brochure_url" | "primary_image_url") => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -115,6 +123,7 @@ export default function OnboardingForm({ initialData }: { initialData?: any }) {
 
       if (field === "logo_url") setLogoUrl(publicUrl);
       if (field === "brochure_url") setBrochureUrl(publicUrl);
+      if (field === "primary_image_url") setPrimaryImageUrl(publicUrl);
       
     } catch (error: any) {
       console.error("Upload failed", error);
@@ -124,7 +133,7 @@ export default function OnboardingForm({ initialData }: { initialData?: any }) {
     }
   };
 
-  const onSubmit = async (data: OnboardingFormValues) => {
+  const onSubmit = async (data: BusinessFormValues) => {
     setIsSubmitting(true);
     setStatus(null);
 
@@ -132,7 +141,7 @@ export default function OnboardingForm({ initialData }: { initialData?: any }) {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        throw new Error("You must be logged in to create a business.");
+        throw new Error(`You must be logged in to ${mode === 'create' ? 'create' : 'update'} a business.`);
       }
 
       const ownerName = user.user_metadata?.full_name || user.email?.split('@')[0] || "Unknown User";
@@ -163,47 +172,19 @@ export default function OnboardingForm({ initialData }: { initialData?: any }) {
         special_offer: data.special_offer,
         logo_url: logoUrl || null,
         brochure_url: brochureUrl || null,
+        primary_image_url: primaryImageUrl || null,
       };
 
-      let targetBusinessId: string;
-      if (initialData?.id) {
-        const { data: updatedBusiness, error } = await supabase
-          .from('businesses')
-          .update(payload)
-          .eq('id', initialData.id)
-          .select('id')
-          .single();
-        if (error) throw error;
-        targetBusinessId = updatedBusiness.id;
+      if (mode === 'create') {
+        const result = await addBusiness(payload);
+        if (!result.success) throw new Error(result.error || "Failed to create profile.");
       } else {
-        const { data: insertedBusiness, error } = await supabase
-          .from('businesses')
-          .insert([payload])
-          .select('id')
-          .single();
-        if (error) throw error;
-        targetBusinessId = insertedBusiness.id;
+        if (!initialData?.id) throw new Error("Missing business ID for update.");
+        const result = await updateBusiness(initialData.id, payload);
+        if (result.error) throw new Error(result.error);
       }
 
-      try {
-        const passageText = `${data.brand_name} - ${data.category}: ${data.description}`;
-        const vector = await getEmbedding(passageText, "passage");
-
-        if (vector) {
-          const { error: updateError } = await supabase
-            .from('businesses')
-            .update({ embedding: vector })
-            .eq('id', targetBusinessId);
-
-          if (updateError) {
-            console.error("Failed to update embedding:", updateError);
-          }
-        }
-      } catch (embError) {
-        console.error("Error generating/saving embedding:", embError);
-      }
-
-      setStatus({ type: "success", message: "Business profile created successfully! Redirecting..." });
+      setStatus({ type: "success", message: `Business profile ${mode === 'create' ? 'created' : 'updated'} successfully! Redirecting...` });
       
       setTimeout(() => {
         router.push('/dashboard');
@@ -224,8 +205,8 @@ export default function OnboardingForm({ initialData }: { initialData?: any }) {
           <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Briefcase className="w-8 h-8 text-blue-700" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-black text-blue-950 mb-3">Create Your Business Profile</h1>
-          <p className="text-slate-600 text-lg">Set up your presence in the YMI Business Directory</p>
+          <h1 className="text-3xl md:text-4xl font-black text-blue-950 mb-3">{mode === 'create' ? 'Create' : 'Edit'} Your Business Profile</h1>
+          <p className="text-slate-600 text-lg">{mode === 'create' ? 'Set up' : 'Update'} your presence in the YMI Business Directory</p>
         </div>
 
         <AnimatePresence>
@@ -492,10 +473,10 @@ export default function OnboardingForm({ initialData }: { initialData?: any }) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Creating Profile...
+                  {mode === 'create' ? 'Creating Profile...' : 'Saving Changes...'}
                 </>
               ) : (
-                "Create Business Profile"
+                mode === 'create' ? "Create Business Profile" : "Save Changes"
               )}
             </button>
           </div>
