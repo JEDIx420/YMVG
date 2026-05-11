@@ -1,17 +1,11 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { generateBusinessVector } from "@/utils/ai/vector-generator";
+import { withAuthAction } from "@/utils/supabase/db-helper";
 
 export async function updateBusiness(businessId: string, formData: any) {
-  const supabase = await createClient();
-
-  // 1. Verify User Session
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return { error: "You must be logged in to update your business profile." };
-  }
+  return withAuthAction(async (supabase, user) => {
 
   // 2. Security Check: Verify Ownership
   const { data: existing, error: fetchError } = await supabase
@@ -74,10 +68,11 @@ export async function updateBusiness(businessId: string, formData: any) {
     console.error("Error during vector generation:", vectorError);
   }
 
-  // 5. Invalidate cache for directory and spotlight pages
-  revalidatePath("/directory");
-  revalidatePath(`/directory/${businessId}`);
-  revalidatePath("/dashboard");
+    // 4. Invalidate cache for directory and spotlight pages
+    revalidatePath("/directory");
+    revalidatePath(`/directory/${businessId}`);
+    revalidatePath("/dashboard");
 
-  return { success: true };
+    return { success: true };
+  }, { error: "Authentication failed or unexpected error occurred." });
 }

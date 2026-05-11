@@ -1,7 +1,7 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { withAuthAction } from "@/utils/supabase/db-helper";
 
 const supabaseAdmin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,14 +9,7 @@ const supabaseAdmin = createAdminClient(
 );
 
 export async function getOrSyncBusiness() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "Unauthorized" };
-  }
-
-  try {
+  return withAuthAction(async (supabase, user) => {
     // STEP 1: Standard Fetch (Uses regular authenticated client)
     const { data: businesses, error: fetchError } = await supabase
       .from('businesses')
@@ -69,28 +62,6 @@ export async function getOrSyncBusiness() {
         return { businesses: updatedBusinesses || [] };
       }
     }
-
     return { businesses: [] }; // Pure empty state
-
-  } catch (error: any) {
-    // Safety check: Do not swallow Next.js internal signals
-    if (
-      error instanceof Error && 
-      (error.message === 'NEXT_REDIRECT' || error.message.includes('DynamicServerError'))
-    ) {
-      throw error;
-    }
-    
-    // Also check Next 15 specific digest for dynamic server usage
-    if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
-      throw error;
-    }
-
-    // Better logging for opaque errors
-    console.error(
-      "CRITICAL ERROR in getOrSyncBusiness:", 
-      error instanceof Error ? error.message : JSON.stringify(error)
-    );
-    return { businesses: [] };
-  }
+  }, { businesses: [] });
 }
