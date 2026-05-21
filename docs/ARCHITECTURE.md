@@ -20,7 +20,7 @@
     * `/about/history` (1922 legacy, YMCA partnership)
 * **SWIR Region Routes (Local):**
     * `/region/leadership` (Regional Director & Cabinet)
-    * `/region/clubs` (Directory of local clubs)
+    * `/region/calendar` (Regional Calendar)
 
 ## 5. Layout & Navigation
 * **Global Layout (`app/layout.tsx`):** Requires a Mega-Menu Navbar with dropdown configurations for 'About YMI' and 'SWIR'.

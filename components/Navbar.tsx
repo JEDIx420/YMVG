@@ -90,8 +90,8 @@ export default function Navbar({ user }: NavbarProps) {
                     <Link href="/region/leadership" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
                       Regional Leadership
                     </Link>
-                    <Link href="/region/clubs" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
-                      Club Directory
+                    <Link href="/region/calendar" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+                      Regional Calendar
                     </Link>
                   </div>
                 </div>

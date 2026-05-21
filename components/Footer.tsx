@@ -55,8 +55,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/region/clubs" className="text-sm hover:text-blue-400 transition-colors">
-                  Local Club Directory
+                <Link href="/region/calendar" className="text-sm hover:text-blue-400 transition-colors">
+                  Regional Calendar
                 </Link>
               </li>
               <li>

@@ -12,17 +12,7 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  const { businesses, error } = await getOrSyncBusiness();
-
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">
-          {error}
-        </div>
-      </div>
-    );
-  }
+  const { businesses } = (await getOrSyncBusiness()) as { businesses: any[] };
 
   // Handle the Empty State
   if (!businesses || businesses.length === 0) {
