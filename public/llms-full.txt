@@ -1,0 +1,46 @@
+# Y's Men International (SWIR) - Comprehensive Technical Specifications
+
+## 1. Complete Database RPC Implementation
+Use this exact signature for executing Reciprocal Rank Fusion hybrid queries:
+
+```sql
+CREATE OR REPLACE FUNCTION hybrid_search_businesses(
+  query_text TEXT,
+  query_embedding VECTOR(2048),
+  match_count INT DEFAULT 10
+)
+RETURNS TABLE (
+  id UUID,
+  brand_name TEXT,
+  category TEXT,
+  description TEXT,
+  services JSONB,
+  special_offer TEXT,
+  logo_url TEXT,
+  primary_image_url TEXT,
+  ym_club TEXT,
+  fts_rank REAL,
+  semantic_similarity REAL
+) 
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    b.id, b.brand_name, b.category, b.description, b.services, b.special_offer, b.logo_url, b.primary_image_url, b.ym_club,
+    ts_rank_cd(to_tsvector('english', b.brand_name || ' ' || b.description || ' ' || b.category || ' ' || coalesce(b.services::text, '')), to_tsquery('english', query_text)) AS fts_rank,
+    (1 - (b.embedding <=> query_embedding))::real AS semantic_similarity
+  FROM businesses b
+  WHERE 
+    to_tsvector('english', b.brand_name || ' ' || b.description || ' ' || b.category || ' ' || coalesce(b.services::text, '')) @@ to_tsquery('english', query_text)
+    OR (b.embedding <=> query_embedding) < 0.50
+  ORDER BY fts_rank DESC, semantic_similarity DESC
+  LIMIT match_count;
+END;
+$$;
+```
+
+## 2. Technical Parameter Matrices & Pipeline Edge Cases
+- **Data Validation Bounds**: `services` column must evaluate as a flat string array (e.g. `["TagA", "TagB"]`). Media uploads are clamped via Zod schemas to **5MB** max for images (jpeg, png, webp) and **15MB** max for application/pdf brochures.
+- **Search Pipeline Normalization**: Embedding queries must string-serialize raw fields into: `Company: [brand_name] | Category: [category] | Description: [description] | Core Expertise: [services]`.
+- **RRF Math & Fail-Safes**: Score calculates as `1 / (60 + R_FTS) + 1 / (60 + R_Semantic)`. Results are normalized by multiplying by 61. If top result RRF score evaluates `< 0.010`, the engine completely bypasses the 50% dynamic drop-off threshold filter and forces a rendering of the top 5 closest best-effort matches.
+- **Client Route State Fallback**: If an active category-scoped query yields 0 rows, `DirectoryClient.tsx` shifts category state back to `'All'`, fires a global directory re-fetch using the query string, and triggers an alert notification banner.

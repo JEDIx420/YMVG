@@ -1,0 +1,12 @@
+user-agent: *
+allow: /
+disallow: /dashboard
+disallow: /dashboard/
+disallow: /auth
+disallow: /auth/
+disallow: /unauthorized
+disallow: /login
+disallow: /actions
+disallow: /actions/
+
+sitemap: https://ysmenswir-v.com/sitemap.xml

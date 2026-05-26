@@ -1,0 +1,28 @@
+# Y's Men International (SWIR) - AI Hub & Business Directory
+
+The official platform for the Y's Men International South West India Region (SWIR), featuring an exclusive membership directory, closed-claiming authentication, and an AI-driven hybrid semantic search pipeline.
+
+## Tech Stack
+- **Framework**: Next.js 16 (App Router), React 19, TypeScript
+- **Styling & Motion**: Tailwind CSS 4, Framer Motion 12
+- **Backend & DB**: Supabase (PostgreSQL 15+), pgvector, Storage Buckets
+- **AI Pipelines**: NVIDIA NIM (Llama 3.2 Nemoretriever 300M Embed V1)
+- **Transactional Mail**: Resend API, @react-email/render
+
+## Core Architecture
+- **Hybrid Search**: Fuses PostgreSQL Full-Text Search (FTS) with 2048-dimensional dense vector embeddings using Reciprocal Rank Fusion (RRF) with tuning constant k=60.
+- **Auth Engine**: Automatic Google OAuth matching against pre-populated admin stubs; alternative VIP IMIS ID cookie-lock verification workflow.
+
+## Primary Route Directory
+- `/` - Homepage with static legacy navigation and motto parallax canvas.
+- `/about/history` - Sequential timeline tracing the 1922 legacy.
+- `/about/philosophy` - Premium glassmorphic pillar panels (Duty, Service, Fellowship, Peace).
+- `/directory` - Hybrid client-server marketplace listing with active category auto-fallback states.
+- `/directory/[id]` - Spotlight details with member voucher templates and lead enquiry forms.
+- `/region/leadership` - Cabinet role profiles with interactive touch targets.
+- `/region/calendar` - Real-time client-side program schedule and date filter matrix.
+- `/dashboard` - Protected administrative interface for business profile telemetry.
+- `/dashboard/onboarding` - Zod-validated multi-part business profiling and asset compiler.
+
+## Reference Documentation
+- Full Specifications: See https://ysmenswir-v.com/llms-full.txt
