@@ -20,15 +20,15 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
-  title: "Ys Mens International South West India Region",
-  description: "International Business Directory and Regional Hub for Y's Men International South West India Region (SWIR)",
+  title: "Y's Men International | South West India Region",
+  description: "Official Business Directory and Regional Hub.",
   other: {
-    "application-name": "Ys Mens International South West India Region",
+    "application-name": "Y's Men International South West India Region",
   },
   openGraph: {
-    title: "Ys Mens International South West India Region",
-    description: "International Business Directory and Regional Hub for Y's Men International South West India Region (SWIR)",
-    siteName: "Ys Mens International South West India Region",
+    title: "Y's Men International | South West India Region",
+    description: "Official Business Directory and Regional Hub.",
+    siteName: "Y's Men International South West India Region",
     url: "https://ysmenswir-v.com",
     type: "website",
     images: [
@@ -36,19 +36,22 @@ export const metadata: Metadata = {
         url: "https://ysmenswir-v.com/favicon.png",
         width: 144,
         height: 144,
-        alt: "Ys Mens International South West India Region Logo",
+        alt: "Y's Men International Logo",
       },
     ],
   },
   icons: {
-    icon: [
-      { url: "/favicon.png", sizes: "144x144", type: "image/png" },
-      { url: "/favicon.ico", sizes: "any" }
-    ],
-    apple: [
-      { url: "/favicon.png", sizes: "144x144", type: "image/png" }
+    icon: "/favicon.ico",
+    apple: "/favicon.png",
+    other: [
+      {
+        rel: "icon",
+        type: "image/png",
+        sizes: "144x144",
+        url: "/favicon.png",
+      }
     ]
-  },
+  }
 };
 
 export default async function RootLayout({
@@ -62,24 +65,26 @@ export default async function RootLayout({
   const websiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Ys Mens International South West India Region",
+    "name": "Y's Men International",
     "alternateName": [
-      "Ys Mens Internation South West India Region",
-      "Y's Men's International South West India Region",
-      "Y's Men International South West India Region",
+      "YMI",
       "YMI SWIR",
-      "YMI South West India Region"
+      "Y's Men International South West India Region",
+      "Y's Men SWIR Directory"
     ],
-    "url": "https://ysmenswir-v.com/"
+    "url": "https://ysmenswir-v.com"
   };
 
   const organizationJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "Ys Mens International South West India Region",
-    "url": "https://ysmenswir-v.com/",
+    "name": "Y's Men International SWIR",
+    "url": "https://ysmenswir-v.com",
     "logo": "https://ysmenswir-v.com/favicon.png",
-    "image": "https://ysmenswir-v.com/favicon.png"
+    "image": "https://ysmenswir-v.com/favicon.png",
+    "sameAs": [
+      "https://www.ysmen.org"
+    ]
   };
 
   return (
