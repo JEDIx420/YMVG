@@ -76,6 +76,54 @@ To protect member privacy, RLS policies are strictly enforced:
 *   **Authenticated Select (Self)**: Users can query all fields (including PII) of rows matching `owner_id = auth.uid()`.
 *   **Authenticated Update**: Allowed only if the user's `auth.uid()` matches the `owner_id` of the record, preventing unauthorized editing of directory listings.
 
+### The `hybrid_search_businesses` PostgreSQL RPC Signature
+To perform reciprocal rank fusion hybrid searches, we define the following secure RPC signature in the PostgreSQL database, executing text-search indexing and dense `pgvector` Cosine Distance math securely on the server-side:
+
+```sql
+CREATE OR REPLACE FUNCTION hybrid_search_businesses(
+  query_text TEXT,
+  query_embedding VECTOR(2048),
+  match_count INT DEFAULT 10
+)
+RETURNS TABLE (
+  id UUID,
+  brand_name TEXT,
+  category TEXT,
+  description TEXT,
+  services JSONB,
+  special_offer TEXT,
+  logo_url TEXT,
+  primary_image_url TEXT,
+  ym_club TEXT,
+  fts_rank REAL,
+  semantic_similarity REAL
+) 
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    b.id, b.brand_name, b.category, b.description, b.services, b.special_offer, b.logo_url, b.primary_image_url, b.ym_club,
+    ts_rank_cd(to_tsvector('english', b.brand_name || ' ' || b.description || ' ' || b.category || ' ' || coalesce(b.services::text, '')), to_tsquery('english', query_text)) AS fts_rank,
+    (1 - (b.embedding <=> query_embedding))::real AS semantic_similarity
+  FROM businesses b
+  WHERE 
+    to_tsvector('english', b.brand_name || ' ' || b.description || ' ' || b.category || ' ' || coalesce(b.services::text, '')) @@ to_tsquery('english', query_text)
+    OR (b.embedding <=> query_embedding) < 0.50
+  ORDER BY fts_rank DESC, semantic_similarity DESC
+  LIMIT match_count;
+END;
+$$;
+```
+
+### Data Structure & Validation Constraints
+*   **`services` Column Schema**: Stored within Supabase `JSONB` as a flat string array:
+    ```json
+    ["Web Development", "UI/UX Design", "GTM Automation"]
+    ```
+*   **Onboarding File Validation Rules (Zod Validation)**:
+    *   **`logo_url` & `primary_image_url`**: Max **5MB** file size per asset; restricted to web-optimized image MIME types (`image/jpeg`, `image/png`, `image/webp`).
+    *   **`brochure_url`**: Max **15MB** file size; restricted strictly to dynamic PDFs (`application/pdf`).
+
 ---
 
 ## 3. The Hybrid Search & Semantic Vector Pipeline
@@ -97,22 +145,27 @@ flowchart TD
 
 ### Step-by-Step Search Mechanics
 
-1.  **Vector Generation (`getEmbedding.ts`)**:
-    *   When a non-empty search query is submitted, a Server Action calls the NVIDIA NIM Embedding API using the `nvidia/llama-3.2-nemoretriever-300m-embed-v1` model.
-    *   This API yields a highly detailed 2048-dimensional array representing the semantic core of the user's input.
+1.  **Payload Normalization & Vector Generation (`getEmbedding.ts`)**:
+    *   **Structured Metadata scrubbing**: Before calling the embedding pipeline, the text is scrubbed of all newlines and compiled into a uniform string block:
+        ```text
+        Company: [brand_name] | Category: [category] | Description: [description] | Core Expertise: [services array joined by commas]
+        ```
+    *   This structured block is dispatched to the NVIDIA NIM Embedding API using the `nvidia/llama-3.2-nemoretriever-300m-embed-v1` model.
+    *   This API yields a highly detailed 2048-dimensional dense array representing the semantic core of the business profile.
 2.  **Database Vector Fusion Query (`search.ts`)**:
     *   The generated embedding and the raw search text are passed to a Supabase PostgreSQL function (RPC) named `hybrid_search_businesses`.
     *   This RPC runs two separate queries:
         *   **Full-Text Search (FTS)** matching the search text against a search-optimized index (made of `brand_name`, `description`, `category`, and `services`).
         *   **Semantic Match** calculating the Cosine Similarity between the query's 2048-D embedding vector and the business record's `embedding` vector using the `<=>` pgvector operator.
-3.  **Reciprocal Rank Fusion (RRF)**:
-    *   The database combines the ranked results of the two searches using the RRF algorithm:
+3.  **Reciprocal Rank Fusion (RRF) & Tuning Parameters**:
+    *   The database combines the ranked results of the two searches using the RRF algorithm with a default tuning constant **$k = 60$**:
         $$\text{RRF Score} = \frac{1}{60 + R_{\text{FTS}}} + \frac{1}{60 + R_{\text{Semantic}}}$$
         *where $R$ is the rank index of the item (1-indexed) in the respective search result set.*
-4.  **Dynamic Relational Drop-off Filtering**:
+4.  **Dynamic Relational Drop-off & Floor Exception Controls**:
     *   To prevent displaying completely irrelevant results at the end of the list, a dynamic filter is applied:
         $$\text{Score Threshold} = \text{Top Result Score} \times 0.50$$
     *   Any result that scores below 50% of the best result's score is immediately culled from the array, keeping listings highly relevant.
+    *   **Fail-Safe Floor Exception**: If the top result's calculated RRF score falls below a floor value of **`0.010`**, the $50\%$ dynamic drop-off filter is completely bypassed. Instead, the search engine displays the top 5 closest best-effort matches to prevent returning an empty state on highly weak queries.
 5.  **Score Normalization**:
     *   Since RRF scores are naturally tiny fractions (with a mathematical maximum of $1/61 + 1/61 = 0.0327$), they are normalized by multiplying by 61, mapping them to a clean percentage ($0.0 \text{ to } 1.0$) for UI rendering.
 
@@ -151,7 +204,11 @@ If a member's Google email does not match a pre-registered stub, they must under
     *   *Features*: Premium multi-panel cards presenting the core pillars: **Duty**, **Service**, **Fellowship**, and **International Peace**. Hovering over cards triggers seamless color-inverting transitions.
 *   **Marketplace Directory (`/directory`)**:
     *   *Features*: Serves as the central hub of search. Initially loaded on the server (RSC) to serve the first 100 businesses instantly to search engine crawlers. Dynamically hands control to the client-side `DirectoryClient` for instant category switching and hybrid search triggers.
-    *   *Automatic Fallback*: If a search in a specific category yields 0 results, the client automatically widens the search to 'All' categories and notifies the user via an active alert.
+    *   *Directory Automatic Fallback Workflow (`DirectoryClient.tsx`)*: If a category filter is active and the search query returns `0` results:
+        1. The client-side component catches the zero-length results array.
+        2. It automatically sets the category filter state back to `'All'`.
+        3. It immediately triggers a fallback query across the entire database directory using the original search query.
+        4. It displays a clear layout alert banner: *"No direct matches found in this category. Expanding search across all categories."* to ensure user onboarding is seamless and informative.
 *   **Spotlight Detail Page (`/directory/[id]`)**:
     *   *Features*: A premium business profile featuring interactive slide-out enquiry forms, custom gallery layouts, promotional vouchers ("Member Offers"), and a sticky contact sidebar displaying their local Y's Men club and district status.
 *   **Regional Leadership Directory (`/region/leadership`)**:
@@ -205,9 +262,30 @@ The `robots.ts` file ensures indexers only crawl useful pages and ignore private
 
 ### Favicon & Search Logo Branding
 *   **Favicon Standards**: We replaced the Next.js default Vercel favicon with a custom-padded, perfectly square brand logo ($144\text{px} \times 144\text{px}$) saved as `public/favicon.png` and `public/favicon.ico`. This meets Google's strict square, multiple-of-48px favicon rules.
-*   **JSON-LD Structured Data**:
-    *   **`WebSite` Schema**: Injected into the root layout's HTML head to explicitly notify search engines of the primary site name ("Ys Mens International South West India Region") along with an array of alternate name spellings.
-    *   **`Organization` Schema**: Maps the official website URL directly to the brand's logo image to display knowledge panels on search result sidebars.
+*   **JSON-LD Structured Data**: Detail the structural schema architectures injected into the Next.js root layout header:
+    *   **`WebSite` Schema**: Injected into the root layout's HTML head to explicitly notify search engines of the primary site name along with an array of alternate name spellings:
+        ```json
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "Y's Men International South West India Region",
+          "alternateName": ["Y's Men SWIR", "YMI SWIR Business Hub", "Ys Men SWIR Directory"],
+          "url": "https://ysmenswir-v.com"
+        }
+        ```
+    *   **`Organization` Schema**: Maps the official website URL directly to the brand's logo image to display knowledge panels on search result sidebars:
+        ```json
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "Y's Men International SWIR",
+          "url": "https://ysmenswir-v.com",
+          "logo": "https://ysmenswir-v.com/favicon.png",
+          "sameAs": [
+            "https://www.ysmen.org"
+          ]
+        }
+        ```
 
 ---
 
