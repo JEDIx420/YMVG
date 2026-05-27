@@ -67,7 +67,7 @@ const leadersData: Leader[] = [
     email: "starkrkumar@gmail.com",
     image: "/directoryimages/rajakumar.jpeg",
     bio: "Fostering youth activities, fellowship engagement, and regional spirit across SWIR communities.",
-    objectPosition: "50% 10%"
+    objectPosition: "50% 35%"
   },
   {
     name: "Yw. Bindya",
@@ -207,10 +207,10 @@ export default function LeadershipPage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <a
                   href={`tel:${regionalDirector.phone}`}
-                  className="flex items-center justify-between gap-3 px-5 py-3 rounded-xl bg-blue-950 text-white font-medium hover:bg-black transition-all shadow-md active:scale-95 group"
+                  className="flex-1 w-full flex items-center justify-between gap-3 px-5 py-3 rounded-xl bg-slate-50 border border-slate-200/60 text-slate-700 font-medium hover:bg-slate-100 hover:border-slate-300 transition-all active:scale-95 group whitespace-nowrap"
                 >
                   <span className="flex items-center gap-2.5">
-                    <Phone className="w-4 h-4 text-red-500 group-hover:scale-110 transition-transform" />
+                    <Phone className="w-4 h-4 text-red-500 group-hover:scale-110 transition-transform shrink-0" />
                     +91 {regionalDirector.phone}
                   </span>
                   <button
@@ -218,11 +218,11 @@ export default function LeadershipPage() {
                       e.preventDefault();
                       handleCopy(regionalDirector.phone, 'rd-phone');
                     }}
-                    className="p-1 hover:bg-white/10 rounded-md transition-colors"
+                    className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-400 hover:text-slate-600"
                     title="Copy Phone"
                   >
                     {copiedId === 'rd-phone' ? (
-                      <Check className="w-4 h-4 text-green-400 animate-scale" />
+                      <Check className="w-4 h-4 text-green-600 animate-scale" />
                     ) : (
                       <Copy className="w-4 h-4 opacity-70 group-hover:opacity-100" />
                     )}
@@ -231,18 +231,18 @@ export default function LeadershipPage() {
 
                 <a
                   href={`mailto:${regionalDirector.email}`}
-                  className="flex items-center justify-between gap-3 px-5 py-3 rounded-xl bg-white border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition-all shadow-sm active:scale-95 group"
+                  className="flex-1 w-full flex items-center justify-between gap-3 px-5 py-3 rounded-xl bg-slate-50 border border-slate-200/60 text-slate-700 font-medium hover:bg-slate-100 hover:border-slate-300 transition-all active:scale-95 group truncate"
                 >
-                  <span className="flex items-center gap-2.5">
-                    <Mail className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
-                    {regionalDirector.email}
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <Mail className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="truncate">{regionalDirector.email}</span>
                   </span>
                   <button
                     onClick={(e) => {
                       e.preventDefault();
                       handleCopy(regionalDirector.email, 'rd-email');
                     }}
-                    className="p-1 hover:bg-slate-100 rounded-md transition-colors"
+                    className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-400 hover:text-slate-600"
                     title="Copy Email"
                   >
                     {copiedId === 'rd-email' ? (
