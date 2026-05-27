@@ -99,6 +99,36 @@ const cardVariants = {
   },
 } as const;
 
+// Helper to get local date at 00:00:00 in India Time Zone (IST)
+function getCurrentISTDate(): Date {
+  const now = new Date();
+  const options = { timeZone: 'Asia/Kolkata', year: 'numeric' as const, month: 'numeric' as const, day: 'numeric' as const };
+  const formatter = new Intl.DateTimeFormat('en-US', options);
+  const parts = formatter.formatToParts(now);
+  
+  const year = parseInt(parts.find(p => p.type === 'year')!.value, 10);
+  const month = parseInt(parts.find(p => p.type === 'month')!.value, 10) - 1; // 0-indexed month
+  const day = parseInt(parts.find(p => p.type === 'day')!.value, 10);
+  
+  return new Date(year, month, day);
+}
+
+// Helper to convert event date text to an IST Date object representing the start date
+function getEventISTDate(dateStr: string, monthYearStr: string): Date {
+  // Extract first number for ranges like "07th & 08th", "10th to 14th", "15th - 17th"
+  const dayMatch = dateStr.match(/\d+/);
+  const day = dayMatch ? parseInt(dayMatch[0], 10) : 1;
+  
+  const parts = monthYearStr.trim().split(/\s+/);
+  const monthName = parts[0];
+  const year = parseInt(parts[1], 10);
+  
+  const months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  const month = months.indexOf(monthName.toLowerCase());
+  
+  return new Date(year, month >= 0 ? month : 0, day);
+}
+
 export default function CalendarPage() {
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -111,23 +141,77 @@ export default function CalendarPage() {
     setMounted(true);
   }, []);
 
+  // Get the current IST date at 00:00:00
+  const currentISTDate = useMemo(() => {
+    if (!mounted) return new Date(2026, 4, 21); // Default fallback matching static layout metadata
+    return getCurrentISTDate();
+  }, [mounted]);
+
+  // Compute dynamic isUpcoming for all events based on live IST date
+  const dynamicEvents = useMemo(() => {
+    return calendarEvents.map(event => {
+      const eventDate = getEventISTDate(event.date, event.monthYear);
+      const isUpcoming = eventDate >= currentISTDate;
+      return {
+        ...event,
+        isUpcoming
+      };
+    });
+  }, [currentISTDate]);
+
   // Stats computation
   const stats = useMemo(() => {
-    const total = calendarEvents.length;
-    const regional = calendarEvents.filter((e) => e.type === "regional").length;
-    const area = calendarEvents.filter((e) => e.type === "area").length;
+    const total = dynamicEvents.length;
+    const regional = dynamicEvents.filter((e) => e.type === "regional").length;
+    const area = dynamicEvents.filter((e) => e.type === "area").length;
     return { total, regional, area };
-  }, []);
+  }, [dynamicEvents]);
 
-  // Determine the next upcoming event relative to the system date of May 21, 2026.
-  // The first upcoming event in June 2026 is id: 5 (June 13th, 2026)
-  const nextEvent = useMemo(() => {
-    return calendarEvents.find((e) => e.id === 5) || calendarEvents[4];
-  }, []);
+  // Determine the next upcoming event relative to live IST date
+  const nextEventData = useMemo(() => {
+    const upcoming = dynamicEvents.filter(e => e.isUpcoming);
+    if (upcoming.length === 0) {
+      // Fallback if all events have passed
+      return {
+        event: dynamicEvents[dynamicEvents.length - 1],
+        daysRemaining: 0,
+        countdownText: "All scheduled events completed"
+      };
+    }
+
+    // Sort upcoming events by date ascending to find the closest one
+    const sorted = [...upcoming].sort((a, b) => {
+      const dateA = getEventISTDate(a.date, a.monthYear);
+      const dateB = getEventISTDate(b.date, b.monthYear);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    const closestEvent = sorted[0];
+    const eventDate = getEventISTDate(closestEvent.date, closestEvent.monthYear);
+    
+    // Calculate difference in days
+    const diffTime = eventDate.getTime() - currentISTDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    let countdownText = `Exactly ${diffDays} Days Remaining`;
+    if (diffDays === 0) {
+      countdownText = "Today";
+    } else if (diffDays === 1) {
+      countdownText = "Tomorrow";
+    }
+
+    return {
+      event: closestEvent,
+      daysRemaining: diffDays,
+      countdownText
+    };
+  }, [dynamicEvents, currentISTDate]);
+
+  const nextEvent = nextEventData.event;
 
   // Filter and search logic
   const filteredEvents = useMemo(() => {
-    return calendarEvents.filter((event) => {
+    return dynamicEvents.filter((event) => {
       // 1. Search Query Filter
       const title = (event.regionalProgram || event.areaProgram).toLowerCase();
       const month = event.monthYear.toLowerCase();
@@ -152,7 +236,7 @@ export default function CalendarPage() {
 
       return matchesSearch && matchesType && matchesTime;
     });
-  }, [searchQuery, typeFilter, timeFilter]);
+  }, [dynamicEvents, searchQuery, typeFilter, timeFilter]);
 
   // Group events by Month & Year for Grid View
   const groupedEvents = useMemo(() => {
@@ -241,7 +325,7 @@ export default function CalendarPage() {
                   <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
                   Next Major Programme
                 </span>
-                <span className="text-slate-400 text-xs font-semibold">May 2026 Focus</span>
+                <span className="text-slate-400 text-xs font-semibold">{nextEvent.monthYear} Focus</span>
               </div>
 
               <div className="space-y-2">
@@ -265,7 +349,7 @@ export default function CalendarPage() {
               <div>
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Estimated Countdown</p>
                 <p className="text-lg font-black text-blue-950 mt-0.5">
-                  {mounted ? "Exactly 23 Days Remaining" : "Loading Countdown..."}
+                  {mounted ? nextEventData.countdownText : "Loading Countdown..."}
                 </p>
               </div>
               <Link
