@@ -14,17 +14,17 @@ export default function Footer() {
               <div className="relative w-12 h-12">
                 <Image 
                   src="/ysmen-footer-logo.png"
-                  alt="YMI Logo"
+                  alt="Y's Men's International Logo"
                   fill
                   className="object-contain"
                 />
               </div>
               <h2 className="text-2xl font-black text-white tracking-tighter">
-                YMI <span className="text-red-500">SWIR</span>
+                Y's Men's International <span className="text-red-500">SWIR</span>
               </h2>
             </Link>
             <p className="text-sm leading-relaxed max-w-xs text-gray-400">
-              The South West India Region (SWIR) of YsMen International is dedicated to service, fellowship, and building sustainable communities through our global network of clubs.
+              The South West India Region (SWIR) of Y's Men's International is dedicated to service, fellowship, and building sustainable communities through our global network of clubs.
             </p>
             <div className="pt-2">
               <span className="inline-block px-3 py-1 text-xs font-semibold bg-blue-900/30 text-blue-400 rounded-full border border-blue-800/50">
@@ -66,7 +66,7 @@ export default function Footer() {
                   rel="noopener noreferrer" 
                   className="text-sm hover:text-blue-400 transition-colors flex items-center"
                 >
-                  Global YMI Site
+                  Global Y's Men's International Site
                   <svg className="ml-1 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>

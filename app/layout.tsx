@@ -65,12 +65,12 @@ export default async function RootLayout({
   const websiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Y's Men International",
+    "name": "Y's Men's International",
     "alternateName": [
-      "YMI",
-      "YMI SWIR",
-      "Y's Men International South West India Region",
-      "Y's Men SWIR Directory"
+      "Y's Men's International",
+      "Y's Men's International SWIR",
+      "Y's Men's International South West India Region",
+      "Y's Men's SWIR Directory"
     ],
     "url": "https://ysmenswir-v.com"
   };
@@ -78,7 +78,7 @@ export default async function RootLayout({
   const organizationJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "Y's Men International SWIR",
+    "name": "Y's Men's International SWIR",
     "url": "https://ysmenswir-v.com",
     "logo": "https://ysmenswir-v.com/favicon.png",
     "image": "https://ysmenswir-v.com/favicon.png",

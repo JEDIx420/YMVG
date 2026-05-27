@@ -219,7 +219,7 @@ export default function EnquiryModal({ isOpen, onClose, businessId, businessName
             
             <div className="bg-slate-50 p-4 text-center">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Protected by YMI Regional Privacy Standards
+                Protected by Y's Men's International Regional Privacy Standards
               </p>
             </div>
           </motion.div>

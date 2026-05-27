@@ -23,7 +23,7 @@ export default async function DashboardPage() {
             <div className="bg-slate-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
               <Briefcase className="w-12 h-12 text-slate-400" />
             </div>
-            <h2 className="text-3xl font-black text-blue-950 mb-4">Welcome to the YMI Business Directory</h2>
+            <h2 className="text-3xl font-black text-blue-950 mb-4">Welcome to the Y's Men's International Business Directory</h2>
             <p className="text-slate-500 text-lg leading-relaxed mb-8 max-w-lg">
               You haven't set up your business profile yet. Create one now to get discovered by the SWIR community.
             </p>

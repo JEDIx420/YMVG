@@ -18,7 +18,7 @@ export async function sendAccessRequest(formData: FormData): Promise<{ success: 
     const sender = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 
     const { error } = await resend.emails.send({
-      from: `YMI Directory <${sender}>`,
+      from: `Y's Men's International Directory <${sender}>`,
       to: "jayanand.jayakumar@gmail.com",
       subject: "New Y's Men Enrollment Application",
       html: `

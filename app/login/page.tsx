@@ -112,7 +112,7 @@ export default function LoginPage() {
                 Registered Y's Men Login
               </h1>
               <p className="text-slate-600 font-light">
-                Please enter your YMI IMIS ID to access the member dashboard.
+                Please enter your Y's Men's International IMIS ID to access the member dashboard.
               </p>
             </>
           )}
@@ -162,7 +162,7 @@ export default function LoginPage() {
               )}
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-blue-950 block">YMI IMIS ID</label>
+                <label className="text-sm font-bold text-blue-950 block">Y's Men's International IMIS ID</label>
                 <input
                   type="text"
                   value={imisId}

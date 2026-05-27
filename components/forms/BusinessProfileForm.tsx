@@ -220,7 +220,7 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
             <Briefcase className="w-8 h-8 text-blue-700" />
           </div>
           <h1 className="text-3xl md:text-4xl font-black text-blue-950 mb-3">{mode === 'create' ? 'Create' : 'Edit'} Your Business Profile</h1>
-          <p className="text-slate-600 text-lg">{mode === 'create' ? 'Set up' : 'Update'} your presence in the YMI Business Directory</p>
+          <p className="text-slate-600 text-lg">{mode === 'create' ? 'Set up' : 'Update'} your presence in the Y's Men's International Business Directory</p>
         </div>
 
         <AnimatePresence>
@@ -371,7 +371,7 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-blue-950">YMI Region</label>
+                <label className="text-sm font-bold text-blue-950">Y's Men's International Region</label>
                 <input 
                   {...register("ym_region")}
                   className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
@@ -379,7 +379,7 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-blue-950">YMI District</label>
+                <label className="text-sm font-bold text-blue-950">Y's Men's International District</label>
                 <input 
                   {...register("ym_district")}
                   className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
@@ -387,7 +387,7 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-blue-950">YMI Zone</label>
+                <label className="text-sm font-bold text-blue-950">Y's Men's International Zone</label>
                 <input 
                   {...register("ym_zone")}
                   className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
@@ -395,7 +395,7 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-blue-950">YMI Club</label>
+                <label className="text-sm font-bold text-blue-950">Y's Men's International Club</label>
                 <input 
                   {...register("ym_club")}
                   className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
@@ -426,7 +426,7 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
                 <label className="text-sm font-bold text-blue-950">Special Offer / Member Discount</label>
                 <input 
                   {...register("special_offer")}
-                  placeholder="e.g. 15% off for YMI Members"
+                  placeholder="e.g. 15% off for Y's Men's International Members"
                   className="w-full px-4 py-2 rounded-lg border border-amber-300 bg-amber-50/50 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-slate-900 placeholder:text-amber-700/50"
                 />
               </div>

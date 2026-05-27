@@ -90,7 +90,7 @@ export default function UnauthorizedPage() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase">YMI Club Name</label>
+                      <label className="text-xs font-bold text-slate-500 uppercase">Y's Men's International Club Name</label>
                       <input 
                         type="text" 
                         name="club" 

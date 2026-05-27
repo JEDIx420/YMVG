@@ -16,7 +16,7 @@ interface PageProps {
 const getWhatsAppLink = (phone: string, brandName: string) => {
   const cleanPhone = phone.replace(/\D/g, "");
   const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-  const message = encodeURIComponent(`Hi, I found your business "${brandName}" on the YMI Business Directory and would like to get in touch!`);
+  const message = encodeURIComponent(`Hi, I found your business "${brandName}" on the Y's Men's International Business Directory and would like to get in touch!`);
   return `https://wa.me/${phoneWithCountry}?text=${message}`;
 };
 
@@ -306,7 +306,7 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
 
                   {(b.contact_email || b.owner_email) && (
                     <a 
-                      href={`mailto:${b.contact_email || b.owner_email}?subject=${encodeURIComponent(`Inquiry from YMI Business Directory - ${b.brand_name}`)}`}
+                      href={`mailto:${b.contact_email || b.owner_email}?subject=${encodeURIComponent(`Inquiry from Y's Men's International Business Directory - ${b.brand_name}`)}`}
                       className="w-full inline-flex items-center justify-center p-3.5 bg-blue-950 hover:bg-black text-white font-bold rounded-2xl transition-all shadow-sm text-base cursor-pointer hover:scale-[0.98] duration-300"
                     >
                       <Mail className="w-5 h-5 mr-3 text-red-500" />

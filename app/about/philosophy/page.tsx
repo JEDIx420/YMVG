@@ -241,7 +241,7 @@ export default function PhilosophyPage() {
               target="_blank"
               className="w-full sm:w-auto px-12 py-5 bg-slate-100 hover:bg-slate-200 text-blue-950 rounded-full font-black text-lg transition-all flex items-center justify-center"
             >
-              Global YMI Site
+              Global Y's Men's International Site
             </a>
           </div>
         </motion.div>

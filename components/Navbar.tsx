@@ -37,14 +37,14 @@ export default function Navbar({ user }: NavbarProps) {
               <div className="relative w-8 h-8 md:w-10 md:h-10 transition-transform duration-300 group-hover:scale-110">
                 <Image 
                   src="/ysmen-footer-logo.png"
-                  alt="YMI Logo"
+                  alt="Y's Men's International Logo"
                   fill
                   className="object-contain"
                   priority
                 />
               </div>
               <div className="flex flex-col leading-none">
-                <span className="text-lg md:text-xl font-black tracking-tighter text-blue-950">YMI</span>
+                <span className="text-lg md:text-xl font-black tracking-tighter text-blue-950">Y's Men</span>
                 <span className="text-[10px] md:text-xs font-bold text-red-600 tracking-widest uppercase">SWIR</span>
               </div>
             </Link>
@@ -60,7 +60,7 @@ export default function Navbar({ user }: NavbarProps) {
               {/* About Dropdown */}
               <div className="relative group">
                 <button className="flex items-center text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors py-4">
-                  About YMI
+                  About Y's Men's International
                   <svg className="ml-1 w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>

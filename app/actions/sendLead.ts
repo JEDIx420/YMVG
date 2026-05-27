@@ -53,7 +53,7 @@ export async function sendLead(formData: z.infer<typeof leadSchema>) {
     // 4. Dispatch email via Resend
     try {
       const { error: emailError } = await resend.emails.send({
-        from: 'YMI Directory <leads@ymidirectory.com>',
+        from: "Y's Men's International Directory <leads@ymidirectory.com>",
         to: [targetEmail],
         bcc: ['jayanand.jayakumar@gmail.com'],
         subject: `New Lead: ${validatedData.name} regarding ${business.brand_name}`,

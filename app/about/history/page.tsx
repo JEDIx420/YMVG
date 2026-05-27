@@ -82,7 +82,7 @@ const milestones = [
     year: "2026",
     title: "Future Horizons",
     subtitle: "Expanding the Global Ecosystem",
-    content: "Looking forward to 2026, YMI SWIR envisions a fully integrated global digital ecosystem, bridging the gap between local service and international professional opportunities for all members.",
+    content: "Looking forward to 2026, Y's Men's International SWIR envisions a fully integrated global digital ecosystem, bridging the gap between local service and international professional opportunities for all members.",
     icon: Globe,
     image: "/history/future_horizons_2026_1775833514931.png",
     fact: "The future focus is on sustainable impact and hyper-connected global community projects."

@@ -180,7 +180,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Step 3: Content Section 2 - The YMI Marketplace with Reveal */}
+      {/* Step 3: Content Section 2 - The Y's Men's International Marketplace with Reveal */}
       <section className="py-32 bg-slate-50 relative overflow-hidden">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
