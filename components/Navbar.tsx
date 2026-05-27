@@ -39,6 +39,7 @@ export default function Navbar({ user }: NavbarProps) {
                   src="/ysmen-footer-logo.png"
                   alt="Y's Men's International Logo"
                   fill
+                  sizes="(max-width: 768px) 32px, 40px"
                   className="object-contain"
                   priority
                 />

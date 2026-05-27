@@ -68,6 +68,7 @@ export default function PhilosophyPage() {
           src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2070&auto=format&fit=crop"
           alt="Philosophy Background"
           fill
+          sizes="100vw"
           className="object-cover"
           priority
         />
@@ -159,6 +160,7 @@ export default function PhilosophyPage() {
                 src="https://images.unsplash.com/photo-1542810634-71277d95dcbb?q=80&w=2070&auto=format&fit=crop"
                 alt="Heritage"
                 fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover"
               />
               <div className="absolute inset-0 bg-blue-950/20"></div>

@@ -110,6 +110,7 @@ export default function HistoryPage() {
           src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=2076&auto=format&fit=crop"
           alt="Historical Context"
           fill
+          sizes="100vw"
           className="object-cover sepia-[0.5] contrast-[1.1] grayscale-[0.2]"
           priority
         />
@@ -233,6 +234,7 @@ export default function HistoryPage() {
                         src={milestone.image}
                         alt={milestone.title}
                         fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 45vw"
                         className="object-cover grayscale hover:grayscale-0 transition-all duration-700"
                       />
                       <div className="absolute inset-0 bg-blue-950/20 group-hover:bg-transparent transition-all"></div>

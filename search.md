@@ -9,7 +9,7 @@ The YMI Directory search is built on a **Hybrid Search philosophy**, combining t
 ### Tech Stack Mapping
 *   **Frontend**: Next.js 15 Client Components (`DirectoryClient.tsx`).
 *   **Middle-Tier**: Next.js Server Actions (`search.ts`, `getEmbedding.ts`) executing securely on the server.
-*   **AI Engine**: NVIDIA NIM Pipeline (`nvidia/llama-3.2-nemoretriever-300m-embed-v1`) for generating 2048-dimensional dense vector embeddings.
+*   **AI Engine**: NVIDIA NIM Pipeline (`nvidia/nv-embedqa-e5-v5`) for generating 1024-dimensional dense vector embeddings.
 *   **Database-Tier**: Supabase PostgreSQL with the `pgvector` extension and custom RPCs for hybrid fusion.
 
 ---
@@ -84,7 +84,7 @@ if (!trimmedQuery) {
 **2. Vector Generation (`app/actions/getEmbedding.ts`)**
 The server action dynamically builds the payload for the NVIDIA API.
 *   **Endpoint**: `https://integrate.api.nvidia.com/v1/embeddings`
-*   **Model**: `nvidia/llama-3.2-nemoretriever-300m-embed-v1`
+*   **Model**: `nvidia/nv-embedqa-e5-v5`
 *   **Input Type**: `query` (or `passage` for insertion)
 
 ```typescript
@@ -96,7 +96,7 @@ const response = await fetch("https://integrate.api.nvidia.com/v1/embeddings", {
   },
   body: JSON.stringify({
     input: [text],
-    model: "nvidia/llama-3.2-nemoretriever-300m-embed-v1",
+    model: "nvidia/nv-embedqa-e5-v5",
     input_type: inputType,
     encoding_format: "float",
     truncate: "NONE"
@@ -122,9 +122,9 @@ const filteredResults = data.filter((business: any) => business.final_score >= m
 The core of the search logic lives inside the database via the `hybrid_search_businesses` RPC, allowing the Postgres engine to handle the heavy math natively.
 
 ### Schema Details
-The `businesses` table utilizes a highly precise 2048-dimensional vector column matching the output of the NVIDIA model.
+The `businesses` table utilizes a highly precise 1024-dimensional vector column matching the output of the NVIDIA model.
 ```sql
-embedding vector(2048)
+embedding vector(1024)
 ```
 > [!WARNING]
 > Currently, there is no explicit HNSW (Hierarchical Navigable Small World) or IVFFlat index defined for the `embedding` column in the migration files. As the dataset scales, this will result in exact K-Nearest Neighbor (KNN) sequential scans, degrading performance. An HNSW index should be applied prior to mass scale.

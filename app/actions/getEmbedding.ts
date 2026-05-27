@@ -14,7 +14,7 @@ export async function getEmbedding(text: string, inputType: "query" | "passage" 
     },
     body: JSON.stringify({
       input: [text],
-      model: "nvidia/llama-3.2-nemoretriever-300m-embed-v1",
+      model: "nvidia/nv-embedqa-e5-v5",
       input_type: inputType,
       encoding_format: "float",
       truncate: "NONE"

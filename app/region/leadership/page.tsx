@@ -173,6 +173,7 @@ export default function LeadershipPage() {
                   src={regionalDirector.image}
                   alt={regionalDirector.name}
                   fill
+                  sizes="(max-width: 768px) 256px, 288px"
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
                   style={{ objectPosition: regionalDirector.objectPosition || "50% 20%" }}
                   priority
@@ -290,6 +291,7 @@ export default function LeadershipPage() {
                       src={member.image}
                       alt={member.name}
                       fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
                       style={{ objectPosition: member.objectPosition || "50% 20%" }}
                     />

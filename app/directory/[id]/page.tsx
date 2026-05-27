@@ -64,6 +64,7 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
             src={b.primary_image_url}
             alt={b.brand_name || "Business"}
             fill
+            sizes="100vw"
             className="object-cover opacity-40"
             priority
           />
@@ -130,6 +131,7 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
                       src={b.logo_url} 
                       alt={b.brand_name || "Logo"} 
                       fill 
+                      sizes="(max-width: 768px) 128px, 176px"
                       className="object-contain"
                     />
                   </div>

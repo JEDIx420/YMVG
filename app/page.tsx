@@ -65,6 +65,7 @@ export default function LandingPage() {
               src="/ysmen-footer-logo.png"
               alt="Y's Men Official Logo"
               fill
+              sizes="(max-width: 768px) 80px, 112px"
               className="object-contain filter drop-shadow-2xl"
               priority
             />

@@ -28,8 +28,8 @@ graph TD
     *   Enables **pgvector** extensions for high-dimensional semantic search vectors.
     *   Implements secure **Row-Level Security (RLS)** to protect member PII (emails, phone numbers).
     *   Leverages **Supabase Storage** for hosting brand logos, primary business banner images, and downloadable PDF brochures.
-*   **AI Embedding Engine**: **NVIDIA NIM (Llama 3.2 Nemoretriever 300M Embed V1)**
-    *   Generates highly dense **2048-dimensional vector embeddings** for semantic text queries.
+*   **AI Embedding Engine**: **NVIDIA NIM (nvidia/nv-embedqa-e5-v5)**
+    *   Generates highly dense **1024-dimensional vector embeddings** for semantic text queries.
 *   **Email Pipeline**: **Resend API**
     *   Uses `@react-email/render` to build type-safe, beautifully formatted HTML transactional emails for lead enquiries and access requests.
 
@@ -67,7 +67,7 @@ The primary domain model is the `businesses` table. It holds all record details,
 | `ym_club` | `text` | Local Y's Men's club affiliation. |
 | `ym_designation` | `text` | Official leadership role within Y's Men. |
 | `imis_id` | `text` | Member's official international ID (e.g., YMI-12345). |
-| `embedding` | `vector(2048)` | 2048-dimensional dense vector representing the brand text. |
+| `embedding` | `vector(1024)` | 1024-dimensional dense vector representing the brand text. |
 | `brochure_url` | `text` | Link to the uploaded PDF brochure. |
 
 ### Row-Level Security (RLS) Rules
@@ -82,7 +82,7 @@ To perform reciprocal rank fusion hybrid searches, we define the following secur
 ```sql
 CREATE OR REPLACE FUNCTION hybrid_search_businesses(
   query_text TEXT,
-  query_embedding VECTOR(2048),
+  query_embedding VECTOR(1024),
   match_count INT DEFAULT 10
 )
 RETURNS TABLE (
@@ -134,7 +134,7 @@ The YMI Directory features a highly advanced **Hybrid Search Pipeline** that fus
 flowchart TD
     A[User Inputs Search Query] --> B{Is Search Query Empty?}
     B -- Yes --> C[Simple Category Database Fetch]
-    B -- No --> D[Generate 2048-D Embedding via NVIDIA NIM]
+    B -- No --> D[Generate 1024-D Embedding via NVIDIA NIM]
     D --> E[Call Supabase hybrid_search_businesses RPC]
     E --> F[Full-Text Search keyword match]
     E --> G[Cosine Distance vector similarity match]
@@ -148,15 +148,15 @@ flowchart TD
 1.  **Payload Normalization & Vector Generation (`getEmbedding.ts`)**:
     *   **Structured Metadata scrubbing**: Before calling the embedding pipeline, the text is scrubbed of all newlines and compiled into a uniform string block:
         ```text
-        Company: [brand_name] | Category: [category] | Description: [description] | Core Expertise: [services array joined by commas]
+        Company: [brand_name] | Location: [city, state, country] | Category: [category] | Description: [description] | Core Expertise: [services array joined by commas]
         ```
-    *   This structured block is dispatched to the NVIDIA NIM Embedding API using the `nvidia/llama-3.2-nemoretriever-300m-embed-v1` model.
-    *   This API yields a highly detailed 2048-dimensional dense array representing the semantic core of the business profile.
+    *   This structured block is dispatched to the NVIDIA NIM Embedding API using the `nvidia/nv-embedqa-e5-v5` model.
+    *   This API yields a highly detailed 1024-dimensional dense array representing the semantic core of the business profile.
 2.  **Database Vector Fusion Query (`search.ts`)**:
     *   The generated embedding and the raw search text are passed to a Supabase PostgreSQL function (RPC) named `hybrid_search_businesses`.
     *   This RPC runs two separate queries:
         *   **Full-Text Search (FTS)** matching the search text against a search-optimized index (made of `brand_name`, `description`, `category`, and `services`).
-        *   **Semantic Match** calculating the Cosine Similarity between the query's 2048-D embedding vector and the business record's `embedding` vector using the `<=>` pgvector operator.
+        *   **Semantic Match** calculating the Cosine Similarity between the query's 1024-D embedding vector and the business record's `embedding` vector using the `<=>` pgvector operator.
 3.  **Reciprocal Rank Fusion (RRF) & Tuning Parameters**:
     *   The database combines the ranked results of the two searches using the RRF algorithm with a default tuning constant **$k = 60$**:
         $$\text{RRF Score} = \frac{1}{60 + R_{\text{FTS}}} + \frac{1}{60 + R_{\text{Semantic}}}$$
@@ -224,7 +224,7 @@ If a member's Google email does not match a pre-registered stub, they must under
     *   *Features*: A clean, interactive form built with React Hook Form and validated with Zod schemas. Handles:
         *   Multi-field details (brand description, tagline, services array).
         *   Direct files upload (logo, banner, brochure) to Supabase Storage.
-        *   **Automatic Embedding Regeneration**: Saving the form compiles the new brand profile text and requests a new 2048-D embedding from the NVIDIA NIM API to ensure search indexes are instantly updated.
+        *   **Automatic Embedding Regeneration**: Saving the form compiles the new brand profile text and requests a new 1024-D embedding from the NVIDIA NIM API to ensure search indexes are instantly updated.
 
 ---
 
@@ -297,7 +297,7 @@ The `robots.ts` file ensures indexers only crawl useful pages and ignore private
 │   │   ├── history/page.tsx       # Chronicles the 1922 legacy
 │   │   └── philosophy/page.tsx    # Details the 4 core pillars
 │   ├── actions/                   # Next.js Server Actions
-│   │   ├── getEmbedding.ts        # NVIDIA NIM 2048-D Vector API
+│   │   ├── getEmbedding.ts        # NVIDIA NIM 1024-D Vector API
 │   │   ├── getOrSyncBusiness.ts   # Auto-claims orphaned stubs
 │   │   └── search.ts              # RRF Hybrid Search execution
 │   ├── auth/

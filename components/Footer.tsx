@@ -16,6 +16,7 @@ export default function Footer() {
                   src="/ysmen-footer-logo.png"
                   alt="Y's Men's International Logo"
                   fill
+                  sizes="48px"
                   className="object-contain"
                 />
               </div>
