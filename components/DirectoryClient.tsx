@@ -8,6 +8,7 @@ import { performHybridSearch, SearchResult, getUniqueCategories } from '@/app/ac
 import { syncAllVectors } from '@/app/actions/sync';
 import { Search, SearchX, ArrowRight, Briefcase, Sparkles, Filter, XCircle, ChevronDown, CheckCircle2, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Highlight } from '@/components/ui/Highlight';
 
@@ -35,6 +36,7 @@ export default function DirectoryClient({
 }: { 
   initialBusinesses: Business[] 
 }) {
+  const router = useRouter();
   const [businesses, setBusinesses] = useState<(Business | SearchResult)[]>(initialBusinesses);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -137,7 +139,8 @@ export default function DirectoryClient({
       try {
         const res = await syncAllVectors();
         if (res.success) {
-          alert(`Success: ${res.message}`);
+          alert(`Successfully synced ${res.count || 0} business vectors.`);
+          router.refresh();
         } else {
           alert(`Error: ${res.message}`);
         }
