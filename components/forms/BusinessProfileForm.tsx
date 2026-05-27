@@ -42,6 +42,9 @@ const onboardingSchema = z.object({
   contact_phone: z.string().optional(),
   website_url: z.string().url("Please enter a valid URL").or(z.literal("")).optional(),
   address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().optional(),
   ym_region: z.string().optional(),
   ym_district: z.string().optional(),
   ym_zone: z.string().optional(),
@@ -83,6 +86,9 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
       contact_phone: initialData?.contact_phone || initialData?.owner_phone || "",
       website_url: initialData?.website_url || "",
       address: initialData?.address || "",
+      city: initialData?.city || "",
+      state: initialData?.state || "",
+      country: initialData?.country || (mode === 'create' ? "India" : ""),
       ym_region: initialData?.ym_region || "",
       ym_district: initialData?.ym_district || "",
       ym_zone: initialData?.ym_zone || "",
@@ -164,6 +170,9 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
         contact_phone: data.contact_phone || null,
         website_url: data.website_url || null,
         address: data.address || null,
+        city: data.city || null,
+        state: data.state || null,
+        country: data.country || null,
         ym_region: data.ym_region || null,
         ym_district: data.ym_district || null,
         ym_zone: data.ym_zone || null,
@@ -331,6 +340,33 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
                   {...register("address")}
                   rows={2}
                   className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-blue-950">City</label>
+                <input 
+                  {...register("city")}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
+                  placeholder="e.g. Thiruvananthapuram"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-blue-950">State</label>
+                <input 
+                  {...register("state")}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
+                  placeholder="e.g. Kerala"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-bold text-blue-950">Country</label>
+                <input 
+                  {...register("country")}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
+                  placeholder="e.g. India"
                 />
               </div>
 

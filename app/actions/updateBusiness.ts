@@ -43,6 +43,9 @@ export async function updateBusiness(businessId: string, formData: any) {
       logo_url: formData.logo_url,
       brochure_url: formData.brochure_url,
       primary_image_url: formData.primary_image_url,
+      city: formData.city,
+      state: formData.state,
+      country: formData.country,
     })
     .eq("id", businessId);
 

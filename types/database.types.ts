@@ -26,4 +26,7 @@ export interface Business {
   embedding: number[] | null;
   brochure_url?: string | null;
   owner_email?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
 }

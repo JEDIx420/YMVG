@@ -5,21 +5,26 @@ import { createClient } from "@/utils/supabase/client";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { User, MapPin, Mail, Phone, ArrowLeft, Tag, Info, Gift } from "lucide-react";
+import { User, MapPin, Mail, Phone, ArrowLeft, Tag, Info, Gift, Shield } from "lucide-react";
 import { Business } from "@/types/database.types";
 import { motion } from "framer-motion";
-import EnquiryModal from "@/components/EnquiryModal";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
+
+const getWhatsAppLink = (phone: string, brandName: string) => {
+  const cleanPhone = phone.replace(/\D/g, "");
+  const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+  const message = encodeURIComponent(`Hi, I found your business "${brandName}" on the YMI Business Directory and would like to get in touch!`);
+  return `https://wa.me/${phoneWithCountry}?text=${message}`;
+};
 
 export default function BusinessSpotlightPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const id = resolvedParams.id;
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
 
   useEffect(() => {
     async function fetchBusiness() {
@@ -253,7 +258,7 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
 
                   <div className="flex items-start">
                     <div className="bg-slate-100 p-2 rounded-lg mr-4 text-slate-500">
-                      <MapPin className="w-5 h-5" />
+                      <Shield className="w-5 h-5" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Affiliation</p>
@@ -267,23 +272,54 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
                       </p>
                     </div>
                   </div>
+
+                  {(b.city || b.state || b.country) && (
+                    <div className="flex items-start">
+                      <div className="bg-slate-100 p-2 rounded-lg mr-4 text-slate-500">
+                        <MapPin className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Location</p>
+                        <p className="text-blue-950 font-bold">
+                          {[b.city, b.state, b.country].filter(Boolean).join(', ')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4">
-                  <button 
-                    onClick={() => setIsEnquiryModalOpen(true)}
-                    className="w-full inline-flex items-center justify-center p-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-red-600/30 text-lg cursor-pointer"
-                  >
-                    <Mail className="w-5 h-5 mr-3" />
-                    Enquire Now
-                  </button>
+                  {(b.contact_phone || b.owner_phone) && (
+                    <a 
+                      href={getWhatsAppLink(b.contact_phone || b.owner_phone || "", b.brand_name || "Business")}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="w-full inline-flex items-center justify-center p-4 bg-[#25D366] hover:bg-[#128C7E] text-white font-black rounded-2xl transition-all shadow-xl shadow-green-500/20 text-lg cursor-pointer hover:scale-[0.98] duration-300"
+                    >
+                      <svg className="w-5 h-5 mr-3 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.504-5.714-1.464L0 24zm6.59-4.846c1.6.95 3.198 1.451 4.811 1.453 5.46.002 9.902-4.439 9.905-9.899.002-2.646-1.03-5.132-2.903-7.006C16.587 1.826 14.1 1.795 12.005 1.795c-5.461 0-9.904 4.442-9.908 9.902-.001 1.765.46 3.486 1.336 5.006L2.392 21.62l5.127-1.344-.872-.544z" />
+                        <path d="M16.917 13.913c-.267-.133-1.582-.78-1.828-.87-.246-.09-.425-.133-.604.134-.179.266-.693.87-.85 1.05-.156.183-.312.204-.579.07-.267-.134-1.127-.416-2.148-1.328-.793-.708-1.329-1.582-1.485-1.848-.156-.266-.017-.409.117-.542.12-.12.267-.312.4-.468.133-.156.179-.266.267-.442.09-.177.045-.333-.023-.468-.067-.134-.604-1.457-.827-1.993-.217-.523-.456-.452-.604-.452h-.515c-.179 0-.47.067-.716.333-.246.267-.938.917-.938 2.235 0 1.318.96 2.59 1.093 2.767.133.177 1.888 2.883 4.574 4.043.64.277 1.139.442 1.528.566.643.204 1.229.176 1.692.107.516-.077 1.582-.646 1.805-1.27.224-.623.224-1.157.157-1.27-.067-.113-.246-.179-.513-.313z" />
+                      </svg>
+                      Connect on WhatsApp
+                    </a>
+                  )}
+
+                  {(b.contact_email || b.owner_email) && (
+                    <a 
+                      href={`mailto:${b.contact_email || b.owner_email}?subject=${encodeURIComponent(`Inquiry from YMI Business Directory - ${b.brand_name}`)}`}
+                      className="w-full inline-flex items-center justify-center p-3.5 bg-blue-950 hover:bg-black text-white font-bold rounded-2xl transition-all shadow-sm text-base cursor-pointer hover:scale-[0.98] duration-300"
+                    >
+                      <Mail className="w-5 h-5 mr-3 text-red-500" />
+                      Email Owner
+                    </a>
+                  )}
 
                   {b.brochure_url && (
                     <a 
                       href={b.brochure_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="w-full inline-flex items-center justify-center p-3.5 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold rounded-2xl transition-all shadow-sm text-base cursor-pointer"
+                      className="w-full inline-flex items-center justify-center p-3.5 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold rounded-2xl transition-all shadow-sm text-base cursor-pointer hover:scale-[0.98] duration-300"
                     >
                       Download Brochure
                     </a>
@@ -323,12 +359,6 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
         </div>
       </main>
 
-      <EnquiryModal 
-        isOpen={isEnquiryModalOpen} 
-        onClose={() => setIsEnquiryModalOpen(false)}
-        businessId={b.id}
-        businessName={b.brand_name || "this business"}
-      />
     </div>
   );
 }
