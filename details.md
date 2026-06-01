@@ -77,41 +77,85 @@ To protect member privacy, RLS policies are strictly enforced:
 *   **Authenticated Update**: Allowed only if the user's `auth.uid()` matches the `owner_id` of the record, preventing unauthorized editing of directory listings.
 
 ### The `hybrid_search_businesses` PostgreSQL RPC Signature
-To perform reciprocal rank fusion hybrid searches, we define the following secure RPC signature in the PostgreSQL database, executing text-search indexing and dense `pgvector` Cosine Distance math securely on the server-side:
+To perform reciprocal rank fusion hybrid searches, we define the following secure RPC signature in the PostgreSQL database, executing text-search indexing and dense `pgvector` Cosine Distance math securely on the database side with no hardcoded similarity threshold gates:
 
 ```sql
 CREATE OR REPLACE FUNCTION hybrid_search_businesses(
-  query_text TEXT,
-  query_embedding VECTOR(1024),
-  match_count INT DEFAULT 10
+  query_embedding vector(1024),          -- Deployed 1024-D vector type
+  query_text text,                       -- Search keywords
+  category_filter text default null,     -- Category dropdown pivot
+  location_filter text default null,     -- City dropdown filter
+  match_count int default 20             -- Search limit
 )
-RETURNS TABLE (
-  id UUID,
-  brand_name TEXT,
-  category TEXT,
-  description TEXT,
-  services JSONB,
-  special_offer TEXT,
-  logo_url TEXT,
-  primary_image_url TEXT,
-  ym_club TEXT,
-  fts_rank REAL,
-  semantic_similarity REAL
-) 
-LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN
-  RETURN QUERY
-  SELECT 
-    b.id, b.brand_name, b.category, b.description, b.services, b.special_offer, b.logo_url, b.primary_image_url, b.ym_club,
-    ts_rank_cd(to_tsvector('english', b.brand_name || ' ' || b.description || ' ' || b.category || ' ' || coalesce(b.services::text, '')), to_tsquery('english', query_text)) AS fts_rank,
-    (1 - (b.embedding <=> query_embedding))::real AS semantic_similarity
-  FROM businesses b
-  WHERE 
-    to_tsvector('english', b.brand_name || ' ' || b.description || ' ' || b.category || ' ' || coalesce(b.services::text, '')) @@ to_tsquery('english', query_text)
-    OR (b.embedding <=> query_embedding) < 0.50
-  ORDER BY fts_rank DESC, semantic_similarity DESC
-  LIMIT match_count;
-END;
+returns table (
+  id uuid,
+  owner_id uuid,
+  owner_name text,
+  contact_email text,
+  contact_phone text,
+  owner_phone text,
+  brand_name text,
+  category text,
+  description text,
+  services jsonb,
+  special_offer text,
+  address text,
+  tagline text,
+  website_url text,
+  logo_url text,
+  primary_image_url text,
+  gallery_urls jsonb,
+  sponsorship_tier integer,
+  ym_region text,
+  ym_club text,
+  ym_designation text,
+  embedding vector(1024),
+  final_score float
+)
+language sql stable
+as $$
+  with filtered_businesses as (
+    select *
+    from businesses
+    where (category_filter is null or category_filter = 'All' or category = category_filter)
+      and (location_filter is null or location_filter = 'All' or city = location_filter)
+  ),
+  vector_matches as (
+    select id, 1 - (embedding <=> query_embedding) as vector_similarity,
+           rank() over (order by embedding <=> query_embedding) as rank
+    from filtered_businesses
+    where embedding is not null
+  ),
+  text_matches as (
+    select id, ts_rank(
+      setweight(to_tsvector('english', coalesce(brand_name, '')), 'A') ||
+      setweight(to_tsvector('english', coalesce(category, '')), 'B') ||
+      setweight(to_tsvector('english', coalesce(description, '')), 'C'),
+      websearch_to_tsquery('english', query_text)
+    ) as text_score,
+    rank() over (order by ts_rank(
+      setweight(to_tsvector('english', coalesce(brand_name, '')), 'A') ||
+      setweight(to_tsvector('english', coalesce(category, '')), 'B') ||
+      setweight(to_tsvector('english', coalesce(description, '')), 'C'),
+      websearch_to_tsquery('english', query_text)
+    ) desc) as rank
+    from filtered_businesses
+    where query_text <> '' and websearch_to_tsquery('english', query_text) @@ (
+      setweight(to_tsvector('english', coalesce(brand_name, '')), 'A') ||
+      setweight(to_tsvector('english', coalesce(category, '')), 'B') ||
+      setweight(to_tsvector('english', coalesce(description, '')), 'C')
+    )
+  )
+  select
+    b.*,
+    -- Reciprocal Rank Fusion (RRF) with weights (70% Vector / 30% Text)
+    (coalesce(1.0 / (60 + v.rank), 0.0) * 0.7) + (coalesce(1.0 / (60 + t.rank), 0.0) * 0.3) as final_score
+  from businesses b
+  left join vector_matches v on v.id = b.id
+  left join text_matches t on t.id = b.id
+  where v.id is not null or t.id is not null
+  order by final_score desc
+  limit match_count;
 $$;
 ```
 
@@ -158,16 +202,16 @@ flowchart TD
         *   **Full-Text Search (FTS)** matching the search text against a search-optimized index (made of `brand_name`, `description`, `category`, and `services`).
         *   **Semantic Match** calculating the Cosine Similarity between the query's 1024-D embedding vector and the business record's `embedding` vector using the `<=>` pgvector operator.
 3.  **Reciprocal Rank Fusion (RRF) & Tuning Parameters**:
-    *   The database combines the ranked results of the two searches using the RRF algorithm with a default tuning constant **$k = 60$**:
-        $$\text{RRF Score} = \frac{1}{60 + R_{\text{FTS}}} + \frac{1}{60 + R_{\text{Semantic}}}$$
-        *where $R$ is the rank index of the item (1-indexed) in the respective search result set.*
-4.  **Dynamic Relational Drop-off & Floor Exception Controls**:
-    *   To prevent displaying completely irrelevant results at the end of the list, a dynamic filter is applied:
-        $$\text{Score Threshold} = \text{Top Result Score} \times 0.50$$
-    *   Any result that scores below 50% of the best result's score is immediately culled from the array, keeping listings highly relevant.
-    *   **Fail-Safe Floor Exception**: If the top result's calculated RRF score falls below a floor value of **`0.010`**, the $50\%$ dynamic drop-off filter is completely bypassed. Instead, the search engine displays the top 5 closest best-effort matches to prevent returning an empty state on highly weak queries.
+    *   The database combines the ranked results of the two searches using the RRF algorithm with a default tuning constant **$k = 60$** and a 70/30 weight distribution ratio:
+        $$\text{RRF Score} = \left(\frac{1}{60 + R_{\text{Semantic}}} \times 0.7\right) + \left(\frac{1}{60 + R_{\text{FTS}}} \times 0.3\right)$$
+        *where $R$ is the rank index of the item (1-indexed) in the respective search result sets.*
+4.  **Dynamic Relational Drop-off Filter**:
+    *   To prevent displaying completely irrelevant results at the end of the list, a dynamic relational filter is applied:
+        $$\text{Score}_{\text{Minimum}} = \text{Score}_{\text{Top}} \times 0.50$$
+    *   Any result that scores below 50% of the top match's score is dynamically filtered out on the server side, keeping listings highly relevant.
 5.  **Score Normalization**:
-    *   Since RRF scores are naturally tiny fractions (with a mathematical maximum of $1/61 + 1/61 = 0.0327$), they are normalized by multiplying by 61, mapping them to a clean percentage ($0.0 \text{ to } 1.0$) for UI rendering.
+    *   Since RRF scores are naturally tiny fractions, they are normalized by multiplying by 61 to map them to a clean percentage scale ($0.0 \text{ to } 1.0$) for visual rendering in the user interface.
+
 
 ---
 
@@ -203,12 +247,15 @@ If a member's Google email does not match a pre-registered stub, they must under
 *   **Philosophy Page (`/about/philosophy`)**:
     *   *Features*: Premium multi-panel cards presenting the core pillars: **Duty**, **Service**, **Fellowship**, and **International Peace**. Hovering over cards triggers seamless color-inverting transitions.
 *   **Marketplace Directory (`/directory`)**:
-    *   *Features*: Serves as the central hub of search. Initially loaded on the server (RSC) to serve the first 100 businesses instantly to search engine crawlers. Dynamically hands control to the client-side `DirectoryClient` for instant category switching and hybrid search triggers.
-    *   *Directory Automatic Fallback Workflow (`DirectoryClient.tsx`)*: If a category filter is active and the search query returns `0` results:
+    *   *Features*: Serves as the central hub of search. Initially loaded on the server (RSC) to serve the first 100 businesses instantly to search engine crawlers. Dynamically hands control to the client-side `DirectoryClient` for instant category switching, location filtering, and hybrid search triggers.
+    *   *Zero-Hardcoding Dynamic Option Collectors*: The UI category and city dropdown selection elements are fully dynamic. On component mount, the system queries the database via server-side actions in parallel using `Promise.all` (`getUniqueCategories()` and `getUniqueCities()`) to fetch distinct values directly from active business listings, ensuring immediate synchronization as profiles are updated.
+    *   *Geographic Location Selector UI*: Includes a location select element featuring a map indicator icon (📍), matching the visual design, height, rounded borders (`rounded-2xl`), font size weight parameters, and category selector layout parity.
+    *   *Directory Automatic Fallback Workflow (`DirectoryClient.tsx`)*: If a category filter or location filter is active and the search query returns `0` results:
         1. The client-side component catches the zero-length results array.
         2. It automatically sets the category filter state back to `'All'`.
         3. It immediately triggers a fallback query across the entire database directory using the original search query.
         4. It displays a clear layout alert banner: *"No direct matches found in this category. Expanding search across all categories."* to ensure user onboarding is seamless and informative.
+
 *   **Spotlight Detail Page (`/directory/[id]`)**:
     *   *Features*: A premium business profile featuring interactive slide-out enquiry forms, custom gallery layouts, promotional vouchers ("Member Offers"), and a sticky contact sidebar displaying their local Y's Men club and district status.
 *   **Regional Leadership Directory (`/region/leadership`)**:
