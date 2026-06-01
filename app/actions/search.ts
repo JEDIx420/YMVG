@@ -11,7 +11,8 @@ export type SearchResult = Business & {
 
 export async function performHybridSearch(
   searchText: string, 
-  category: string | null
+  category: string | null,
+  location: string | null = null
 ): Promise<SearchResult[]> {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -29,12 +30,16 @@ export async function performHybridSearch(
   try {
     const trimmedQuery = searchText.trim();
 
-    // Stage 1: Empty Query Bypass (Category-only browsing)
+    // Stage 1: Empty Query Bypass (Category/Location-only browsing)
     if (!trimmedQuery) {
       let query = supabase.from('businesses').select('*');
       
       if (category && category !== 'All') {
         query = query.eq('category', category);
+      }
+
+      if (location && location !== 'All') {
+        query = query.eq('city', location);
       }
       
       const { data, error } = await query.limit(20);
@@ -66,6 +71,7 @@ export async function performHybridSearch(
       query_embedding: queryEmbedding || null,
       query_text: trimmedQuery,
       category_filter: category === 'All' ? null : category,
+      location_filter: location === 'All' ? null : location,
       match_count: 20
     });
 

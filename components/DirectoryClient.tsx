@@ -40,6 +40,7 @@ export default function DirectoryClient({
   const [businesses, setBusinesses] = useState<(Business | SearchResult)[]>(initialBusinesses);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedLocation, setSelectedLocation] = useState<string>('All');
   const [availableCategories, setAvailableCategories] = useState<string[]>(['All']);
   const [isSearching, setIsSearching] = useState(false);
   const [isWideSearch, setIsWideSearch] = useState(false);
@@ -55,9 +56,9 @@ export default function DirectoryClient({
     fetchCats();
   }, []);
 
-  const executeSearch = async (query: string, category: string, isManual: boolean) => {
+  const executeSearch = async (query: string, category: string, location: string, isManual: boolean) => {
     // Stage 0: Empty Reset Logic
-    if (!query.trim() && category === 'All') {
+    if (!query.trim() && category === 'All' && location === 'All') {
       setBusinesses(initialBusinesses);
       setIsWideSearch(false);
       setManualSearchPerformed(false);
@@ -69,12 +70,12 @@ export default function DirectoryClient({
     if (isManual) setManualSearchPerformed(true);
     
     try {
-      const results = await performHybridSearch(query, category);
+      const results = await performHybridSearch(query, category, location);
       
       // Automatic Fallback: Wide Search (Only if keyword search failed)
-      if (results.length === 0 && category !== 'All') {
+      if (results.length === 0 && (category !== 'All' || location !== 'All')) {
         setIsWideSearch(true);
-        const wideResults = await performHybridSearch(query, 'All');
+        const wideResults = await performHybridSearch(query, 'All', 'All');
         setBusinesses(wideResults);
       } else {
         setBusinesses(results);
@@ -86,16 +87,16 @@ export default function DirectoryClient({
     }
   };
 
-  // Immediate Category Reactivity
+  // Immediate Category / Location Reactivity
   React.useEffect(() => {
     // Avoid double search on mount if initial state is already set
-    // But we need it for immediate pivot if category changes
-    executeSearch(searchQuery, selectedCategory, false);
-  }, [selectedCategory]);
+    // But we need it for immediate pivot if category/location changes
+    executeSearch(searchQuery, selectedCategory, selectedLocation, false);
+  }, [selectedCategory, selectedLocation]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    await executeSearch(searchQuery, selectedCategory, true);
+    await executeSearch(searchQuery, selectedCategory, selectedLocation, true);
   };
 
   // Helper to determine match reason for Semantic Highlighting
@@ -228,6 +229,25 @@ export default function DirectoryClient({
                 </div>
               </div>
 
+              {/* Geographic Location Dropdown Select */}
+              <div className="relative min-w-[200px] group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 pointer-events-none flex items-center justify-center">
+                  <span className="text-sm">📍</span>
+                </div>
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  className="w-full pl-10 pr-10 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all appearance-none text-slate-700 font-medium cursor-pointer"
+                >
+                  {['All', 'Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Kottayam', 'Kollam', 'Neyyattinkara', 'Pathanamthitta', 'Nagercoil'].map(city => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={isSearching}
@@ -297,7 +317,8 @@ export default function DirectoryClient({
                   onClick={() => {
                     setSearchQuery('');
                     setSelectedCategory('All');
-                    executeSearch('', 'All', false);
+                    setSelectedLocation('All');
+                    executeSearch('', 'All', 'All', false);
                   }}
                   className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-all shadow-sm active:scale-95"
                 >
