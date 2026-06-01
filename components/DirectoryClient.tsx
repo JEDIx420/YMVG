@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Business } from '@/types/database.types';
 import { getEmbedding } from '@/app/actions/getEmbedding';
-import { performHybridSearch, SearchResult, getUniqueCategories } from '@/app/actions/search';
+import { performHybridSearch, SearchResult, getUniqueCategories, getUniqueCities } from '@/app/actions/search';
 import { syncAllVectors } from '@/app/actions/sync';
 import { Search, SearchX, ArrowRight, Briefcase, Sparkles, Filter, XCircle, ChevronDown, CheckCircle2, Zap } from 'lucide-react';
 import Link from 'next/link';
@@ -42,18 +42,23 @@ export default function DirectoryClient({
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedLocation, setSelectedLocation] = useState<string>('All');
   const [availableCategories, setAvailableCategories] = useState<string[]>(['All']);
+  const [availableLocations, setAvailableLocations] = useState<string[]>(['All']);
   const [isSearching, setIsSearching] = useState(false);
   const [isWideSearch, setIsWideSearch] = useState(false);
   const [manualSearchPerformed, setManualSearchPerformed] = useState(false);
   const [isSyncing, startSync] = React.useTransition();
 
-  // Fetch unique categories from database on mount
+  // Fetch unique categories & cities from database on mount
   React.useEffect(() => {
-    const fetchCats = async () => {
-      const cats = await getUniqueCategories();
+    const fetchFilters = async () => {
+      const [cats, cities] = await Promise.all([
+        getUniqueCategories(),
+        getUniqueCities()
+      ]);
       setAvailableCategories(['All', ...cats]);
+      setAvailableLocations(['All', ...cities]);
     };
-    fetchCats();
+    fetchFilters();
   }, []);
 
   const executeSearch = async (query: string, category: string, location: string, isManual: boolean) => {
@@ -239,7 +244,7 @@ export default function DirectoryClient({
                   onChange={(e) => setSelectedLocation(e.target.value)}
                   className="w-full pl-10 pr-10 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all appearance-none text-slate-700 font-medium cursor-pointer"
                 >
-                  {['All', 'Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Kottayam', 'Kollam', 'Neyyattinkara', 'Pathanamthitta', 'Nagercoil'].map(city => (
+                  {availableLocations.map(city => (
                     <option key={city} value={city}>{city}</option>
                   ))}
                 </select>

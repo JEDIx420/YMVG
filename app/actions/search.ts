@@ -132,3 +132,34 @@ export async function getUniqueCategories(): Promise<string[]> {
     return [];
   }
 }
+
+export async function getUniqueCities(): Promise<string[]> {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
+
+  try {
+    const { data, error } = await supabase
+      .from('businesses')
+      .select('city')
+      .not('city', 'is', null);
+
+    if (error) throw error;
+
+    // Get unique cities, filter out empty strings, and sort them
+    const unique = Array.from(new Set(data.map(item => item.city).filter(Boolean))) as string[];
+    return unique.sort();
+  } catch (err) {
+    console.error("Failed to fetch unique cities:", err);
+    return [];
+  }
+}
