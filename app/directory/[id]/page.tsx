@@ -5,9 +5,10 @@ import { createClient } from "@/utils/supabase/client";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { User, MapPin, Mail, Phone, ArrowLeft, Tag, Info, Gift, Shield } from "lucide-react";
+import { User, MapPin, Mail, Phone, ArrowLeft, Tag, Info, Gift, Shield, Share2, Check } from "lucide-react";
 import { Business } from "@/types/database.types";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { logAnalyticsEvent } from "@/app/actions/logAnalyticsEvent";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -25,7 +26,10 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
   const id = resolvedParams.id;
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserProfileId, setCurrentUserProfileId] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
+  // Fetch business details
   useEffect(() => {
     async function fetchBusiness() {
       const supabase = createClient();
@@ -44,6 +48,42 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
     }
     fetchBusiness();
   }, [id]);
+
+  // Fetch current user's profile ID for generating referral links
+  useEffect(() => {
+    async function fetchUserProfile() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
+        if (!error && data) {
+          setCurrentUserProfileId(data.id);
+        }
+      }
+    }
+    fetchUserProfile();
+  }, []);
+
+  // Fire-and-forget background analytics log
+  useEffect(() => {
+    if (!business) return;
+
+    const logEvent = async () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const refId = params.get("ref");
+        await logAnalyticsEvent(business.id, refId);
+      } catch (err) {
+        console.error("Failed to log background analytics event:", err);
+      }
+    };
+    logEvent();
+  }, [business?.id]);
+
 
   if (isLoading) {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-400 uppercase tracking-widest">Loading Spotlight...</div>;
@@ -315,6 +355,29 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
                       Email Owner
                     </a>
                   )}
+
+                  {/* Share Business / Unique Referral Link Button */}
+                  <button
+                    onClick={() => {
+                      const shareUrl = `${window.location.origin}/directory/${b.id}${currentUserProfileId ? `?ref=${currentUserProfileId}` : ""}`;
+                      navigator.clipboard.writeText(shareUrl);
+                      setShareCopied(true);
+                      setTimeout(() => setShareCopied(false), 2000);
+                    }}
+                    className="w-full inline-flex items-center justify-center p-3.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold rounded-2xl transition-all shadow-md text-base cursor-pointer hover:scale-[0.98] duration-300 gap-2 border border-red-500/10"
+                  >
+                    {shareCopied ? (
+                      <>
+                        <Check className="w-5 h-5 text-emerald-300" />
+                        <span>Link Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-5 h-5" />
+                        <span>Share Business {currentUserProfileId && "(& Refer)"}</span>
+                      </>
+                    )}
+                  </button>
 
                   {b.brochure_url && (
                     <a 

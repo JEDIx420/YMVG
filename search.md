@@ -72,12 +72,18 @@ The hybrid search database tier utilizes the `pgvector` extension configured wit
 
 ### SQL Database Schema definition for `hybrid_search_businesses` RPC:
 
+To perform reciprocal rank fusion hybrid searches, we define the following secure RPC signature in the PostgreSQL database (updated to **1024-dimensional** pgvector via migration `007_resize_vector_dimensions.sql`).
+
+> [!WARNING]
+> **Schema Mismatch Alert**: In the current database migrations (specifically `007_resize_vector_dimensions.sql`), the `hybrid_search_businesses` function **does not** accept a `location_filter` parameter and only filters by `category_filter`. However, the middle-tier server action in `app/actions/search.ts` invokes the RPC passing `location_filter` to the query. To ensure absolute operational safety, either the database function should be updated to accept `location_filter` or the application code should be aligned with the database signature.
+
+Below is the **actual** RPC signature defined in `007_resize_vector_dimensions.sql`:
+
 ```sql
 CREATE OR REPLACE FUNCTION hybrid_search_businesses(
   query_embedding vector(1024),          -- Deployed 1024-D vector type
   query_text text,                       -- Search keywords
   category_filter text default null,     -- Category dropdown pivot
-  location_filter text default null,     -- City dropdown filter
   match_count int default 20             -- Search limit
 )
 returns table (
@@ -111,7 +117,6 @@ as $$
     select *
     from businesses
     where (category_filter is null or category_filter = 'All' or category = category_filter)
-      and (location_filter is null or location_filter = 'All' or city = location_filter)
   ),
   vector_matches as (
     select id, 1 - (embedding <=> query_embedding) as vector_similarity,

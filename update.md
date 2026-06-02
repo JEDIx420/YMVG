@@ -1,0 +1,430 @@
+# YMI SWIR Business Directory - Architectural Upgrade Blueprint & Execution Roadmap
+
+This document serves as the official, comprehensive architectural blueprint for pivoting the Y's Men International South West India Region (SWIR) Business Directory into a multi-tenant, Role-Based Access Control (RBAC) networking and advertising ecosystem.
+
+---
+
+## 1. Project Context & Objectives
+
+### Transition to Role-Based Access Control (RBAC)
+The platform is transitioning from a single-entity business dashboard to a robust, multi-tenant RBAC ecosystem. Under the new model, access rights and interface experiences are governed by a user's role.
+
+### The Role Escalation Principle
+All users enter the platform on parity. Upon logging in via Google OAuth for the first time:
+1. They are automatically provisioned with a `profiles` record.
+2. Their initial role is set to `member`.
+3. They are presented with a personal profile dashboard where they can manage their profile details.
+4. They can participate in the referral network as a peer.
+5. They are upgraded to `business_owner` **only when they register a business profile** (either by claiming an administrative pre-populated stub or by creating a net-new business profile).
+
+### Super Admin Identity
+To bootstrap the administrative hierarchy securely:
+* The email address `jayanand.jayakumar@gmail.com` is hardcoded as the initial `super_admin` in database triggers, auth callbacks, and middleware checkers.
+* A `super_admin` possesses full read/write privileges across all records, tables, storage buckets, sitemaps, and analytics reports.
+
+---
+
+## 2. Database Migration Plan (Supabase)
+
+The upgrade requires transitioning from our flat `businesses` structure into a normalized, relational database model. Below are the precise table structures, enums, triggers, and foreign keys.
+
+```mermaid
+erDiagram
+    profiles ||--o| businesses : "owns (1-to-1 or 1-to-Many)"
+    profiles ||--o{ analytics_events : "referred_by (1-to-Many)"
+    businesses ||--o{ analytics_events : "views_or_clicks (1-to-Many)"
+    businesses ||--o{ ad_campaigns : "boosts (1-to-Many)"
+
+    profiles {
+        uuid id PK
+        uuid user_id FK "auth.users"
+        text full_name
+        text email
+        text phone
+        text club
+        app_role app_role
+        timestamp created_at
+    }
+
+    businesses {
+        uuid id PK
+        uuid owner_id FK "auth.users"
+        uuid owner_profile_id FK "profiles"
+        text brand_name
+        text category
+        vector embedding
+    }
+
+    analytics_events {
+        uuid id PK
+        text event_type
+        uuid business_id FK "businesses"
+        uuid referrer_profile_id FK "profiles"
+        text ip_hash
+        timestamp created_at
+    }
+
+    ad_campaigns {
+        uuid id PK
+        uuid business_id FK "businesses"
+        text status
+        float boost_multiplier
+        timestamp start_date
+        timestamp end_date
+        timestamp created_at
+    }
+```
+
+### 2.1 Enums & Extensions
+*   **`app_role` Enum**:
+    ```sql
+    CREATE TYPE app_role AS ENUM ('super_admin', 'region_admin', 'business_owner', 'member');
+    ```
+
+### 2.2 Table Definitions
+
+#### A. The `profiles` Table
+Normalized user accounts automatically synced with Supabase Auth:
+```sql
+CREATE TABLE public.profiles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  full_name text,
+  email text NOT NULL UNIQUE,
+  phone text,
+  club text,
+  app_role app_role DEFAULT 'member'::app_role NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+```
+
+#### B. The `analytics_events` Table
+A high-throughput table designed to log edge clicks and directory user flows without storing raw PII:
+```sql
+CREATE TABLE public.analytics_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_type text CHECK (event_type IN ('view', 'referral')) NOT NULL,
+  business_id uuid REFERENCES public.businesses(id) ON DELETE CASCADE NOT NULL,
+  referrer_profile_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  ip_hash text NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX idx_analytics_business ON public.analytics_events(business_id);
+CREATE INDEX idx_analytics_referrer ON public.analytics_events(referrer_profile_id);
+```
+
+#### C. The `ad_campaigns` Table
+Controls directory search sponsorships and advertising campaigns:
+```sql
+CREATE TABLE public.ad_campaigns (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id uuid REFERENCES public.businesses(id) ON DELETE CASCADE NOT NULL,
+  status text CHECK (status IN ('draft', 'pending', 'active', 'paused', 'expired')) DEFAULT 'draft' NOT NULL,
+  boost_multiplier float DEFAULT 1.0 NOT NULL,
+  start_date timestamp with time zone NOT NULL,
+  end_date timestamp with time zone NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+CREATE INDEX idx_ad_campaign_business ON public.ad_campaigns(business_id);
+```
+
+### 2.3 Alterations to the `businesses` Table
+To connect listings directly to the normalized user profile rather than bare auth IDs:
+1. Add `owner_profile_id` linking to `profiles`:
+   ```sql
+   ALTER TABLE public.businesses 
+   ADD COLUMN owner_profile_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL;
+   ```
+2. Create an index to optimize joins and relational checks:
+   ```sql
+   CREATE INDEX idx_businesses_owner_profile ON public.businesses(owner_profile_id);
+   ```
+
+### 2.4 Profile Initialization Trigger
+To guarantee every user has a profile automatically on Google OAuth callback:
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (user_id, email, full_name, app_role)
+  VALUES (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', new.email),
+    CASE 
+      WHEN new.email = 'jayanand.jayakumar@gmail.com' THEN 'super_admin'::app_role
+      ELSE 'member'::app_role
+    END
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+```
+
+---
+
+## 3. Row-Level Security (RLS) Matrix
+
+We must enforce rigorous access control to protect private data and maintain the integrity of our directory.
+
+| Table Name | Operation | Policy Rule / SQL Condition | Target Audience |
+| :--- | :--- | :--- | :--- |
+| **`profiles`** | `SELECT` | `auth.uid() = user_id OR (SELECT app_role FROM public.profiles WHERE user_id = auth.uid()) IN ('super_admin', 'region_admin')` | Owner & Admins |
+| | `UPDATE` | `auth.uid() = user_id` | Account Owner Only |
+| | `INSERT` | System Trigger (No direct public insert allowed) | System |
+| **`analytics_events`**| `INSERT` | `true` (Public anonymous insertion allowed for tracking) | Anyone (Public) |
+| | `SELECT` | `(SELECT app_role FROM public.profiles WHERE user_id = auth.uid()) IN ('super_admin', 'region_admin') OR EXISTS (SELECT 1 FROM public.businesses b WHERE b.id = business_id AND b.owner_id = auth.uid())` | Business Owner & Admins |
+| | `UPDATE` | `false` (Analytics events are immutable) | None |
+| **`ad_campaigns`** | `SELECT` | `(SELECT app_role FROM public.profiles WHERE user_id = auth.uid()) IN ('super_admin', 'region_admin') OR EXISTS (SELECT 1 FROM public.businesses b WHERE b.id = business_id AND b.owner_id = auth.uid())` | Business Owner & Admins |
+| | `INSERT` | `EXISTS (SELECT 1 FROM public.businesses b WHERE b.id = business_id AND b.owner_id = auth.uid())` | Business Owner |
+| | `UPDATE` | `(SELECT app_role FROM public.profiles WHERE user_id = auth.uid()) IN ('super_admin', 'region_admin') OR (EXISTS (SELECT 1 FROM public.businesses b WHERE b.id = business_id AND b.owner_id = auth.uid()) AND status = 'draft')` | Owner (Drafts only) & Admins |
+| **`businesses`** | `UPDATE` | `owner_id = auth.uid() OR (SELECT app_role FROM public.profiles WHERE user_id = auth.uid()) = 'super_admin' OR ((SELECT app_role FROM public.profiles WHERE user_id = auth.uid()) = 'region_admin' AND ym_region = (SELECT club FROM public.profiles WHERE user_id = auth.uid()))` | Owner, Super Admin, Region Admin (regional match) |
+
+---
+
+## 4. Referral & Analytics Engine Logic
+
+To capture metrics without penalizing page load speed, the referral and view counters execute as a fire-and-forget background service.
+
+### 4.1 URL Generation & Parsing
+When a user shares a business profile, the directory generates a unique referral link utilizing their unique profile UUID:
+```text
+https://ysmenswir-v.com/directory/[business_id]?ref=[profile_uuid]
+```
+
+### 4.2 Silent Client-Side Trigger
+Inside `app/directory/[id]/page.tsx`, a `useEffect` hook captures search parameters on mount:
+```typescript
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const referrerId = params.get('ref');
+  
+  // Call the background logger server action (fire-and-forget)
+  logAnalyticsEvent(businessId, referrerId);
+}, [businessId]);
+```
+
+### 4.3 Background Logger Action (`logAnalyticsEvent.ts`)
+The server action processes metrics asynchronously. It does not block the React render thread.
+*   **IP Hashing**: To prevent fraud and double-counting without collecting GDPR-sensitive data, incoming client IP addresses are hashed using SHA-256 before insertion.
+*   **Event Sorting**:
+    *   If `referrerId` is absent or invalid, it inserts an event of `event_type = 'view'`.
+    *   If `referrerId` is present and valid (and is **not** the business owner's profile), it inserts an event of `event_type = 'referral'`.
+*   **Duplication Prevention**: A 24-hour rate limit checks for identical `(business_id, ip_hash, event_type)` triplets to prevent view-stuffing.
+
+---
+
+## 5. Search Engine Upgrades (Ad Boosts)
+
+Our vector search engine will be upgraded to support dynamic, sponsored placement. Businesses with active advertising campaigns will have their hybrid search scores boosted.
+
+```mermaid
+graph TD
+    Query[User query text / embedding] --> Search[PostgreSQL RPC Search]
+    Search --> FTS[Full-Text Search CTE]
+    Search --> Vector[Cosine Vector Match CTE]
+    FTS & Vector --> RRF[RRF Fusion Rank Calculation]
+    RRF --> Join[LEFT JOIN active ad_campaigns]
+    Join --> Boost{Is Active Campaign?}
+    Boost -- Yes --> Apply[Multiply RRF score by boost_multiplier]
+    Boost -- No --> Final[Final RRF score]
+    Apply & Final --> Sort[Order by final_score DESC]
+```
+
+### The Upgraded RPC Signature
+The SQL function `hybrid_search_businesses` in `007_resize_vector_dimensions.sql` will be dropped and replaced with a signature that incorporates the `ad_campaigns` join, dynamic boosting, and resolves the missing `location_filter` parameter.
+
+```sql
+CREATE OR REPLACE FUNCTION hybrid_search_businesses(
+  query_embedding vector(1024),
+  query_text text,
+  category_filter text default null,
+  location_filter text default null,
+  match_count int default 20
+)
+returns table (
+  id uuid,
+  owner_id uuid,
+  owner_name text,
+  contact_email text,
+  contact_phone text,
+  owner_phone text,
+  brand_name text,
+  category text,
+  description text,
+  services jsonb,
+  special_offer text,
+  address text,
+  tagline text,
+  website_url text,
+  logo_url text,
+  primary_image_url text,
+  gallery_urls jsonb,
+  sponsorship_tier integer,
+  ym_region text,
+  ym_club text,
+  ym_designation text,
+  embedding vector(1024),
+  is_boosted boolean,
+  final_score float
+)
+language sql stable
+as $$
+  with filtered_businesses as (
+    select *
+    from businesses
+    where (category_filter is null or category_filter = 'All' or category = category_filter)
+      and (location_filter is null or location_filter = 'All' or city = location_filter)
+  ),
+  vector_matches as (
+    select id, 1 - (embedding <=> query_embedding) as vector_similarity,
+           rank() over (order by embedding <=> query_embedding) as rank
+    from filtered_businesses
+    where embedding is not null
+  ),
+  text_matches as (
+    select id, ts_rank(
+      setweight(to_tsvector('english', coalesce(brand_name, '')), 'A') ||
+      setweight(to_tsvector('english', coalesce(category, '')), 'B') ||
+      setweight(to_tsvector('english', coalesce(description, '')), 'C'),
+      websearch_to_tsquery('english', query_text)
+    ) as text_score,
+    rank() over (order by ts_rank(
+      setweight(to_tsvector('english', coalesce(brand_name, '')), 'A') ||
+      setweight(to_tsvector('english', coalesce(category, '')), 'B') ||
+      setweight(to_tsvector('english', coalesce(description, '')), 'C'),
+      websearch_to_tsquery('english', query_text)
+    ) desc) as rank
+    from filtered_businesses
+    where query_text <> '' and websearch_to_tsquery('english', query_text) @@ (
+      setweight(to_tsvector('english', coalesce(brand_name, '')), 'A') ||
+      setweight(to_tsvector('english', coalesce(category, '')), 'B') ||
+      setweight(to_tsvector('english', coalesce(description, '')), 'C')
+    )
+  ),
+  rrf_raw as (
+    select
+      b.id,
+      (coalesce(1.0 / (60 + v.rank), 0.0) * 0.7) + (coalesce(1.0 / (60 + t.rank), 0.0) * 0.3) as raw_score
+    from businesses b
+    left join vector_matches v on v.id = b.id
+    left join text_matches t on t.id = b.id
+    where v.id is not null or t.id is not null
+  )
+  select
+    b.id, b.owner_id, b.owner_name, b.contact_email, b.contact_phone, b.owner_phone,
+    b.brand_name, b.category, b.description, b.services, b.special_offer, b.address,
+    b.tagline, b.website_url, b.logo_url, b.primary_image_url, b.gallery_urls,
+    b.sponsorship_tier, b.ym_region, b.ym_club, b.ym_designation, b.embedding,
+    (ac.id is not null) as is_boosted,
+    -- Multiply RRF Score by ad campaign multiplier (Default to 1.0 if no campaign is active)
+    (r.raw_score * coalesce(ac.boost_multiplier, 1.0))::float as final_score
+  from rrf_raw r
+  join businesses b on b.id = r.id
+  left join public.ad_campaigns ac on ac.business_id = b.id 
+    and ac.status = 'active'
+    and now() between ac.start_date and ac.end_date
+  order by final_score desc
+  limit match_count;
+$$;
+```
+
+---
+
+## 6. Routing & UI Architecture
+
+Dashboard pages will employ Next.js layout composition to switch view components dynamically based on user identity fetched via Server Components.
+
+```text
+app/dashboard/
+├── layout.tsx         # Checks User Role, renders custom premium sidebar
+├── page.tsx           # Server Router (switches view based on role)
+└── components/
+    ├── MemberView.tsx         # Personal profile, register business CTA, referral tracker
+    ├── BusinessOwnerView.tsx  # Core business profile metrics, leads log, ad portal
+    └── AdminView.tsx          # SQL aggregated statistics dashboards (Recharts/Tremor)
+```
+
+### 6.1 Dynamic Layout Router (`app/dashboard/layout.tsx`)
+1. Fetches authenticated session.
+2. Performs a server-side join query: `supabase.from('profiles').select('app_role').single()`.
+3. Renders a unified, glassmorphic panel sidebar. The sidebar options are dynamic:
+   * **Super Admin / Region Admin**: Analytics, User Audit, Regions Directory, Business Directory, Ad Campaigns.
+   * **Business Owner**: My Business, Lead Center, Analytics, Boost Promos, Billing.
+   * **Member**: My Profile, Referral Hub, Register Business.
+
+### 6.2 View Specifications
+
+#### A. MemberView (`MemberView.tsx`)
+Designed to encourage engagement and conversion into directory listings:
+*   **Profile Editor**: Form to manage name, contact phone, and affiliated club.
+*   **Referral Scoreboard**: Custom glass cards displaying the user's personal referral UUID, link sharing shortcuts, and a counter of verified referrals successfully tracked.
+*   **Business Enrollment CTA**: Premium interactive banner showing directory statistics (e.g. *"Join 500+ Local Enterprises"*) leading to `/dashboard/onboarding`.
+
+#### B. BusinessOwnerView (`BusinessOwnerView.tsx`)
+The operational cockpit for directory listing owners:
+*   **Performance Metrics Grid**: Dynamic counts of views and referrals.
+*   **Self-Serve Sponsorship Panel**: Allows owners to draft `ad_campaigns`, configure boost multipliers, and launch campaigns.
+*   **Lead Intake Log**: Lists customer messages received via spotlight inquiry panels.
+
+#### C. AdminView (`AdminView.tsx`)
+A command dashboard for administrators:
+*   **Regional Analytics Drill-Down**: Custom bar charts comparing metrics across zones, regions, and categories.
+*   **Category Analysis**: Pie chart mapping listing distributions to professional categories.
+*   **Approve Campaigns Queue**: A list of `pending` campaigns allowing super admins to approve or decline sponsorships.
+
+---
+
+## 7. Strict Execution Phases
+
+To ensure maximum safety and consistency, development will proceed incrementally. **We will stop and wait for human review at the end of each phase before proceeding.**
+
+```mermaid
+stateDiagram-v2
+    [*] --> Phase1 : Start
+    Phase1 --> Wait1 : Stop & Review
+    Wait1 --> Phase2 : Approved
+    Phase2 --> Wait2 : Stop & Review
+    Wait2 --> Phase3 : Approved
+    Phase3 --> Wait3 : Stop & Review
+    Wait3 --> Phase4 : Approved
+    Phase4 --> Wait4 : Stop & Review
+    Wait4 --> Phase5 : Approved
+    Phase5 --> Wait5 : Stop & Review
+    Wait5 --> Phase6 : Approved
+    Phase6 --> [*] : Complete
+```
+
+### Phase 1: Supabase SQL Migrations & RLS Policies
+*   **Action**: Create new migrations to establish the `app_role` enum, the `profiles` table, the `analytics_events` table, and the `ad_campaigns` table. Write user creation triggers and apply RLS matrices.
+*   **Verification**: Check table indices, test trigger execution by creating a dummy user, and verify RLS blocking policies in the Supabase SQL editor.
+*   **PAUSE**: Wait for verification check and explicit user approval.
+
+### Phase 2: User Onboarding Flow & Profile Synchronization
+*   **Action**: Update Next.js Google OAuth callback and session middleware to handle profile retrieval. Create forms to capture initial member information.
+*   **Verification**: Test user creation on Google sign-in; verify a member profile is populated in the database.
+*   **PAUSE**: Wait for verification check and explicit user approval.
+
+### Phase 3: Dashboard Layout Refactoring & Role-Based Routing
+*   **Action**: Refactor `app/dashboard/layout.tsx` and `app/dashboard/page.tsx` into a dynamic layout router switching views based on `app_role`.
+*   **Verification**: Manually adjust test account role properties and verify the user interface shifts matching their role permissions.
+*   **PAUSE**: Wait for verification check and explicit user approval.
+
+### Phase 4: Analytics Edge Logger & Unique Referral Logic
+*   **Action**: Implement `logAnalyticsEvent.ts` server action, hash client IPs on edge views, parse the URL `?ref=` search arguments, and compile sharing links.
+*   **Verification**: Navigate to spotlight directories using mock referral queries and inspect the `analytics_events` database outputs.
+*   **PAUSE**: Wait for verification check and explicit user approval.
+
+### Phase 5: Dashboard UI Components & Aggregate Statistics
+*   **Action**: Build `MemberView.tsx`, `BusinessOwnerView.tsx`, and `AdminView.tsx` with premium glassmorphic cards, Tremor/Recharts charts, and SQL aggregate RPC fetches.
+*   **Verification**: Test aggregate SQL functions and confirm correct UI styling and responsive grids.
+*   **PAUSE**: Wait for verification check and explicit user approval.
+
+### Phase 6: Hybrid Search RPC Upgrade & Ad Campaigns
+*   **Action**: Recompile `hybrid_search_businesses` in Supabase to incorporate active campaigns, boost factors, and `location_filter`. Set up campaign activation logic.
+*   **Verification**: Perform search queries with sponsored campaigns active, and verify boosted records float to the top of results.
+*   **PAUSE**: Wait for verification check and explicit user approval.

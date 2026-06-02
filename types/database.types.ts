@@ -1,6 +1,7 @@
 export interface Business {
   id: string;
   owner_id: string | null;
+  owner_profile_id?: string | null; // Added in Phase 1 normalization
   owner_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
@@ -30,3 +31,17 @@ export interface Business {
   state?: string | null;
   country?: string | null;
 }
+
+export type AppRole = 'super_admin' | 'region_admin' | 'business_owner' | 'member';
+
+export interface Profile {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  email: string;
+  phone: string | null;
+  club: string | null;
+  app_role: AppRole;
+  created_at: string;
+}
+
