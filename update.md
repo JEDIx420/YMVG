@@ -466,3 +466,114 @@ During execution, deployment audits, and integration testing, several critical e
 ### 8.5 Strict React Rules of Hooks Conformity
 *   **Issue**: The client component `CampaignsAdminClient.tsx` returned view states dynamically before hook declarations were finished, causing React to throw a fatal `"Rendered more hooks than during the previous render"` hook-order violation error.
 *   **Correction**: Repositioned all React state and route hooks (`useRouter`, `useState` states) to the absolute top of the component file, ensuring zero early exits or conditional evaluations precede hook allocations, fully satisfying React compilation standards.
+
+---
+
+## 9. Phase 7: UX Polish & Feature Enhancements (Post-Deployment)
+
+After completing the core 6-phase architectural upgrade, a comprehensive UX polish and feature enhancement pass was executed. All changes in this phase are **purely frontend** — no backend SQL migrations or Supabase schema alterations were made.
+
+### 9.1 Navigation & View Toggling (Admin Impersonation UI)
+
+Super Admins and Region Admins who also own businesses needed a way to switch between their administrative console and their personal business owner dashboard without logging into a separate account.
+
+#### A. Sidebar Refactoring (`components/dashboard/Sidebar.tsx`)
+*   **Removed** the "Main Website" and "Public Directory" navigation links from the sidebar to keep the dashboard focused.
+*   **Implemented `useSearchParams` hook** to detect the `?view=owner` query parameter in the URL.
+*   **Dynamic navigation override**: When a `super_admin` or `region_admin` accesses any dashboard route with `?view=owner`, the sidebar automatically renders the `business_owner` navigation array (My Business, Lead Center, Analytics, Boost Promos, Billing) instead of the standard admin links.
+*   **Link propagation**: All sidebar `<Link>` components in impersonated view append `?view=owner` to their `href` to persist the view state across page navigation.
+*   **Role badge override**: The user identity card at the bottom of the sidebar displays `"business owner (impersonated)"` when in owner view mode.
+
+#### B. AdminView Toggle Button (`app/dashboard/components/AdminView.tsx`)
+*   **Removed** the previous "Audit Members" and "Manage Ads" buttons from the top-right header area.
+*   **Replaced** with a premium "View My Business Profile" button linking to `/dashboard?view=owner`.
+*   The button uses the `blue-950` brand color with a `Briefcase` icon and smooth hover/active scale transitions.
+
+#### C. Dashboard Router Logic (`app/dashboard/page.tsx`)
+*   **Updated** the server component to accept and resolve `searchParams` from the URL.
+*   **New routing branch**: If `profile.app_role === 'super_admin'` AND `searchParams.view === 'owner'`, the page renders `<BusinessOwnerView />` instead of `<AdminView />`, fetching the admin's own business listings and analytics events scoped to their `owner_id`.
+*   **Return banner**: A sticky banner appears at the top of `BusinessOwnerView` for impersonated admins, providing a one-click "Return to Admin Console" link that strips the `?view=owner` parameter.
+
+#### D. SSR Hydration Mismatch Fix (`Sidebar.tsx`)
+*   **Issue**: The sidebar initially used `window.innerWidth` during render to determine mobile/desktop state, causing a React SSR hydration mismatch (server HTML diverged from client HTML).
+*   **Fix**: Removed all `window` checks from the initial render. Desktop/mobile layout is now controlled entirely by responsive Tailwind CSS classes (`md:translate-x-0`, `-translate-x-full`). A `mounted` state flag gates the mobile backdrop overlay to prevent SSR divergence.
+
+---
+
+### 9.2 Interactive Analytics Dashboard
+
+A full-featured analytics dashboard was built at `/dashboard/analytics` for administrators to visualize directory-wide metrics.
+
+#### A. Server Component Gate (`app/dashboard/analytics/page.tsx`)
+*   **Security**: Only `super_admin` and `region_admin` roles can access the page. All other roles are redirected to `/dashboard`.
+*   **Data Fetch**: Uses `Promise.all` to concurrently fetch profiles count, all businesses (with `id`, `brand_name`, `category`, `city`, `ym_region`), all ad campaigns (with `status`, `boost_multiplier`, `business_id`, `created_at`), and all analytics events (with `event_type`, `business_id`, `created_at`).
+*   **All queries use the standard authenticated Supabase client** — no service role key bypass.
+
+#### B. Client Component (`app/dashboard/analytics/AnalyticsClient.tsx`)
+*   **Technology**: Built with `recharts` for charting and `framer-motion` for entrance animations.
+*   **Dependency Added**: `recharts` was added to `package.json`.
+*   **Interactive Filters**: Two dropdown selectors (Region and Category) allow administrators to slice the dataset in real-time. All counters, charts, and exports update reactively via `useMemo` chains.
+*   **Stats Counter Grid** (4 cards): Total Members, Matched Listings (filtered), Active Boosts (filtered), and Traffic Clicks (views + referrals, filtered). Each card animates in with staggered `framer-motion` transitions.
+*   **Gradient Area Chart**: Displays a 7-day timeline of referrals and campaign activations using `AreaChart` with gradient fills (`linearGradient` definitions for blue and red).
+*   **Donut/Pie Chart**: Visualizes business distribution by category (top 8) using `PieChart` with an inner-radius donut style and a side legend.
+*   **CSV Export**: A "Download CSV Report" button generates a client-side CSV file containing: Business ID, Brand Name, Category, City, Region, Views count, and Referrals count for the currently filtered dataset. The download is triggered via a dynamically created `<a>` element with `Blob` URL.
+
+---
+
+### 9.3 CRM User Audit Module
+
+A member audit and CRM inspection tool was built at `/dashboard/users` for administrators to search, browse, and inspect all registered platform members.
+
+#### A. Server Component (`app/dashboard/users/page.tsx`)
+*   **Security**: Only `super_admin` and `region_admin` roles can access the page.
+*   **Data Fetch**: Concurrent fetch of all profiles (ordered by `created_at` descending) and all businesses (with `id`, `brand_name`, `owner_id`, `owner_profile_id`) for cross-referencing ownership.
+
+#### B. Client Component (`app/dashboard/users/UserAuditClient.tsx`)
+*   **Technology**: Built with `framer-motion` for the slide-out drawer animation.
+*   **Search Bar**: Real-time keyword search filters by `full_name` or `email` with instant results count feedback.
+*   **Audit Table**: Responsive table displaying member name (with avatar initial), email, role tier (color-coded badges: red for `super_admin`, amber for `region_admin`, blue for `business_owner`, slate for `member`), club affiliation, and join date.
+*   **CRM Detail Drawer**: Clicking any row opens a full-height slide-out panel from the right side with:
+    *   Large avatar initial with gradient background
+    *   Complete PII details: email, phone, club affiliation, authorization role
+    *   Registered profile UUID
+    *   **Associated Business Listings**: Cross-references the `businesses` table by `owner_profile_id` and `owner_id` to display all enterprises owned by the selected member, with clickable external links to the public directory page.
+*   **Drawer Animation**: Uses `framer-motion` `AnimatePresence` with spring physics (`damping: 25, stiffness: 220`) for smooth slide transitions. A `backdrop-blur-sm` overlay dims the background.
+
+---
+
+### 9.4 AdminView Enhancement (`app/dashboard/components/AdminView.tsx`)
+
+The main admin dashboard was significantly upgraded with live data:
+
+*   **Real-time System Activities Feed**: Aggregates the 5 most recent events across profiles, businesses, and ad campaigns into a unified, chronologically sorted activity log. Each entry shows an icon (Users/Briefcase/Sparkles), description, type badge, status indicator (color-coded dot), and relative timestamp (e.g., "2 hrs ago").
+*   **Category Density Distribution**: A horizontal bar chart showing the top 5 business categories with percentage-width bars and listing counts.
+*   **Campaign Status Breakdown**: A status-grouped panel showing draft/pending/active/paused/expired campaign counts with color-coded status dots and percentage breakdowns.
+*   **Clickable Metric Cards**: The three top-level counters (Registered Members, Listed Enterprises, Active Boost Ads) are now wrapped in `<Link>` components navigating to their respective audit pages (`/dashboard/users`, `/dashboard/businesses`, `/dashboard/campaigns`).
+
+---
+
+### 9.5 Dashboard Data Aggregation Overhaul (`app/dashboard/page.tsx`)
+
+The main dashboard server component was refactored to supply rich data to AdminView:
+
+*   **8 concurrent queries** via `Promise.all`: member count, business count, active campaigns count, recent campaigns (with joined business name), recent profiles, recent businesses, all business categories, and all campaign statuses.
+*   **Activity Aggregation Engine**: Merges recent profiles, businesses, and campaigns into a unified activity stream sorted by timestamp, then formats relative time strings ("Just now", "3 mins ago", "1 day ago").
+*   **Category Statistics**: Groups all businesses by category and computes top-5 counts.
+*   **Campaign Statistics**: Groups all campaigns by status for the breakdown panel.
+*   All data is passed as serialized props to the `<AdminView>` client component.
+
+---
+
+### 9.6 Files Changed Summary
+
+| File | Action | Description |
+| :--- | :--- | :--- |
+| `components/dashboard/Sidebar.tsx` | **MODIFIED** | Added `useSearchParams` hook, dynamic nav override for `?view=owner`, link propagation, role badge impersonation label, SSR hydration fix |
+| `app/dashboard/components/AdminView.tsx` | **MODIFIED** | Replaced header buttons with "View My Business Profile" toggle, added live activity feed, category density bars, campaign status breakdown, clickable metric cards |
+| `app/dashboard/page.tsx` | **MODIFIED** | Added `searchParams` resolution, `?view=owner` routing branch, 8 concurrent data queries, activity aggregation engine |
+| `app/dashboard/components/BusinessOwnerView.tsx` | **MODIFIED** | Added return-to-admin sticky banner for impersonated admins |
+| `app/dashboard/analytics/page.tsx` | **NEW** | Server component with role gate and concurrent data fetch |
+| `app/dashboard/analytics/AnalyticsClient.tsx` | **NEW** | Interactive Recharts dashboard with filters, area chart, pie chart, CSV export |
+| `app/dashboard/users/page.tsx` | **NEW** | Server component with role gate and concurrent profiles/businesses fetch |
+| `app/dashboard/users/UserAuditClient.tsx` | **NEW** | CRM audit table with search, detail drawer, and business cross-reference |
+| `package.json` | **MODIFIED** | Added `recharts` dependency |
