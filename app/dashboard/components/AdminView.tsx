@@ -103,18 +103,11 @@ export default function AdminView({
 
         <div className="flex gap-3 shrink-0">
           <Link 
-            href="/dashboard/users"
-            className="inline-flex items-center gap-2 px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all text-xs active:scale-95 cursor-pointer"
+            href="/dashboard?view=owner"
+            className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-blue-950 hover:bg-black text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-950/20 text-xs active:scale-95 cursor-pointer"
           >
-            <Users className="w-4 h-4" />
-            <span>Audit Members</span>
-          </Link>
-          <Link 
-            href="/dashboard/campaigns"
-            className="inline-flex items-center gap-2 px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all shadow-md shadow-red-600/10 text-xs active:scale-95 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Manage Ads</span>
+            <Briefcase className="w-4 h-4 text-red-500" />
+            <span>View My Business Profile</span>
           </Link>
         </div>
       </div>

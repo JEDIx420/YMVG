@@ -5,7 +5,11 @@ import MemberView from "./components/MemberView";
 import BusinessOwnerView from "./components/BusinessOwnerView";
 import AdminView from "./components/AdminView";
 
-export default async function DashboardPage() {
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function DashboardPage({ searchParams }: PageProps) {
   // 1. Fetch authenticated session
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -19,6 +23,38 @@ export default async function DashboardPage() {
 
   if (!profile) {
     redirect("/");
+  }
+
+  // Check URL parameters for view toggle
+  const resolvedSearchParams = await searchParams;
+  const view = resolvedSearchParams.view;
+
+  if (profile.app_role === "super_admin" && view === "owner") {
+    const { data: businesses } = await supabase
+      .from("businesses")
+      .select("*")
+      .eq("owner_id", user.id);
+
+    let analyticsEvents: any[] = [];
+    if (businesses && businesses.length > 0) {
+      const bizIds = businesses.map(b => b.id);
+      const { data: events } = await supabase
+        .from("analytics_events")
+        .select("business_id, event_type")
+        .in("business_id", bizIds);
+
+      if (events) {
+        analyticsEvents = events;
+      }
+    }
+
+    return (
+      <BusinessOwnerView
+        profile={profile}
+        businesses={businesses || []}
+        analyticsEvents={analyticsEvents}
+      />
+    );
   }
 
   // 3. Dynamic database query dispatch based on user role parameters

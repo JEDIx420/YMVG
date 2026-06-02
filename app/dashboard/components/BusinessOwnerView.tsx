@@ -36,6 +36,27 @@ export default function BusinessOwnerView({ profile, businesses, analyticsEvents
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
       
+      {/* Return Banner for Impersonating Super Admins */}
+      {profile.app_role === "super_admin" && (
+        <div className="sticky top-4 z-50 bg-blue-950 text-white rounded-3xl p-5 border border-red-500/20 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Admin Control Impersonation</p>
+              <p className="text-xs font-light text-slate-300">Currently viewing the Partner Console as a Business Owner.</p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard"
+            className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 shrink-0 text-center"
+          >
+            Return to Admin Console
+          </Link>
+        </div>
+      )}
+      
       {/* Upper Navigation Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1.5">

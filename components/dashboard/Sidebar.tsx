@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { 
   Briefcase, 
@@ -33,6 +33,7 @@ interface SidebarProps {
 export default function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const supabase = createClient();
@@ -49,14 +50,13 @@ export default function Sidebar({ profile }: SidebarProps) {
 
   // Define navigation links based on user roles
   const getNavLinks = () => {
-    // Persistent public-facing exit routes for all tiers (improves navigation fluidity)
-    const exitLinks = [
-      { name: "Main Website", href: "/", icon: Home },
-      { name: "Public Directory", href: "/directory", icon: Globe },
-    ];
-
     let roleLinks = [];
-    switch (profile.app_role) {
+    const isOwnerView = searchParams.get("view") === "owner";
+    const activeRole = (isOwnerView && (profile.app_role === "super_admin" || profile.app_role === "region_admin"))
+      ? "business_owner"
+      : profile.app_role;
+
+    switch (activeRole) {
       case "super_admin":
       case "region_admin":
         roleLinks = [
@@ -88,7 +88,15 @@ export default function Sidebar({ profile }: SidebarProps) {
         break;
     }
     
-    return [...exitLinks, ...roleLinks];
+    // Append ?view=owner if impersonating
+    if (isOwnerView && (profile.app_role === "super_admin" || profile.app_role === "region_admin")) {
+      return roleLinks.map(link => ({
+        ...link,
+        href: `${link.href}?view=owner`
+      }));
+    }
+    
+    return roleLinks;
   };
 
   const navLinks = getNavLinks();
@@ -163,11 +171,8 @@ export default function Sidebar({ profile }: SidebarProps) {
             
             {navLinks.map((link) => {
               // Active state matching: "/" only matches "/" exactly; dashboard links match via startsWith to prevent broad matching
-              const isActive = link.href === "/" 
-                ? pathname === "/" 
-                : pathname === link.href || (link.href !== "/dashboard" && pathname.startsWith(link.href));
+              const isActive = pathname === link.href || (link.href !== "/dashboard" && pathname.startsWith(link.href));
               const Icon = link.icon;
-              const isExitLink = link.href === "/" || link.href === "/directory";
               
               return (
                 <Link
@@ -183,9 +188,7 @@ export default function Sidebar({ profile }: SidebarProps) {
                   <Icon className={`w-4 h-4 transition-colors duration-300 ${
                     isActive 
                       ? "text-red-600" 
-                      : isExitLink
-                        ? "text-slate-400 group-hover:text-blue-600"
-                        : "text-slate-400 group-hover:text-slate-900"
+                      : "text-slate-400 group-hover:text-slate-900"
                   }`} />
                   <span>{link.name}</span>
                 </Link>
@@ -206,7 +209,9 @@ export default function Sidebar({ profile }: SidebarProps) {
                 {profile.full_name || "Nexus User"}
               </h4>
               <span className="text-[10px] font-black text-red-600 uppercase tracking-wider block mt-0.5">
-                {profile.app_role.replace("_", " ")}
+                {searchParams.get("view") === "owner" && (profile.app_role === "super_admin" || profile.app_role === "region_admin")
+                  ? "business owner (impersonated)"
+                  : profile.app_role.replace("_", " ")}
               </span>
             </div>
           </div>
