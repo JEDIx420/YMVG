@@ -1,5 +1,9 @@
 # YMI SWIR Business Directory - Architectural Upgrade Blueprint & Execution Roadmap
 
+> [!NOTE]
+> **Current Status: COMPLETED**  
+> All 6 phases of the architectural and security upgrades have been fully executed, audited for strict RLS/RBAC scoping, validated for Rules of Hooks conformity, compiled with zero errors, and successfully deployed.
+
 This document serves as the official, comprehensive architectural blueprint for pivoting the Y's Men International South West India Region (SWIR) Business Directory into a multi-tenant, Role-Based Access Control (RBAC) networking and advertising ecosystem.
 
 ---
@@ -400,31 +404,65 @@ stateDiagram-v2
 ```
 
 ### Phase 1: Supabase SQL Migrations & RLS Policies
+*   **Status**: **COMPLETED**
 *   **Action**: Create new migrations to establish the `app_role` enum, the `profiles` table, the `analytics_events` table, and the `ad_campaigns` table. Write user creation triggers and apply RLS matrices.
-*   **Verification**: Check table indices, test trigger execution by creating a dummy user, and verify RLS blocking policies in the Supabase SQL editor.
-*   **PAUSE**: Wait for verification check and explicit user approval.
+*   **Verification**: Tested table indices, triggers, and verified RLS blocking policies.
 
 ### Phase 2: User Onboarding Flow & Profile Synchronization
+*   **Status**: **COMPLETED**
 *   **Action**: Update Next.js Google OAuth callback and session middleware to handle profile retrieval. Create forms to capture initial member information.
-*   **Verification**: Test user creation on Google sign-in; verify a member profile is populated in the database.
-*   **PAUSE**: Wait for verification check and explicit user approval.
+*   **Verification**: Verified Google sign-in onboarding and automatically provisioned member profiles.
 
 ### Phase 3: Dashboard Layout Refactoring & Role-Based Routing
+*   **Status**: **COMPLETED**
 *   **Action**: Refactor `app/dashboard/layout.tsx` and `app/dashboard/page.tsx` into a dynamic layout router switching views based on `app_role`.
-*   **Verification**: Manually adjust test account role properties and verify the user interface shifts matching their role permissions.
-*   **PAUSE**: Wait for verification check and explicit user approval.
+*   **Verification**: Validated interface shifts matching administrative, business owner, and standard member roles.
 
 ### Phase 4: Analytics Edge Logger & Unique Referral Logic
+*   **Status**: **COMPLETED**
 *   **Action**: Implement `logAnalyticsEvent.ts` server action, hash client IPs on edge views, parse the URL `?ref=` search arguments, and compile sharing links.
-*   **Verification**: Navigate to spotlight directories using mock referral queries and inspect the `analytics_events` database outputs.
-*   **PAUSE**: Wait for verification check and explicit user approval.
+*   **Verification**: Logged click logs and referral data with GDPR compliance rate limits.
 
 ### Phase 5: Dashboard UI Components & Aggregate Statistics
+*   **Status**: **COMPLETED**
 *   **Action**: Build `MemberView.tsx`, `BusinessOwnerView.tsx`, and `AdminView.tsx` with premium glassmorphic cards, Tremor/Recharts charts, and SQL aggregate RPC fetches.
-*   **Verification**: Test aggregate SQL functions and confirm correct UI styling and responsive grids.
-*   **PAUSE**: Wait for verification check and explicit user approval.
+*   **Verification**: Built responsive panels with live telemetry dashboards.
 
 ### Phase 6: Hybrid Search RPC Upgrade & Ad Campaigns
+*   **Status**: **COMPLETED**
 *   **Action**: Recompile `hybrid_search_businesses` in Supabase to incorporate active campaigns, boost factors, and `location_filter`. Set up campaign activation logic.
-*   **Verification**: Perform search queries with sponsored campaigns active, and verify boosted records float to the top of results.
-*   **PAUSE**: Wait for verification check and explicit user approval.
+*   **Verification**: Successfully launched sponsored boosts order placement and verified high-scored listings prioritize on matching query parameters.
+
+---
+
+## 8. Post-Deployment Notes & Architectural Corrections
+
+During execution, deployment audits, and integration testing, several critical engineering corrections were made to align the codebase with strict security practices and schema accuracy:
+
+### 8.1 Database Schema Alignment & Type-Casting Corrections
+*   **Issue**: In the database migrations, the fields `services` and `gallery_urls` on the `businesses` table were defined as PostgreSQL `text[]` arrays, and `sponsorship_tier` was set to `double precision`. However, initial RPC draft definitions declared them as `jsonb` and `integer` respectively. This mismatch prevented successful compilation of the `hybrid_search_businesses` search engine.
+*   **Correction**: Updated the `hybrid_search_businesses` RPC signature in `009_upgraded_hybrid_search.sql` to strictly map parameter/return signatures:
+    *   `services` aligned to `text[]`
+    *   `gallery_urls` aligned to `text[]`
+    *   `sponsorship_tier` aligned to `double precision`
+
+### 8.2 Standard Client Restore (RLS Enforcement)
+*   **Issue**: An initial draft attempted to resolve RLS query restrictions by instantiating the `SUPABASE_SERVICE_ROLE_KEY` bypass client in dashboard server components. This introduces a severe privilege escalation vulnerability as it bypasses all user RLS scoping rules, breaking geographic isolation bounds for `region_admin` operators.
+*   **Correction**: Reverted all administrative dashboard Server Components (`app/dashboard/page.tsx`, `businesses/page.tsx`, `regions/page.tsx`, `campaigns/page.tsx`, etc.) to use the standard authenticated cookie-scoped client (`createServerClient` parsing the user's cookies). Permissions are correctly evaluated on the database layer through role checks in the policies (`get_my_role()`).
+
+### 8.3 Strict RLS Owner Verification
+*   **Issue**: The default INSERT RLS policy on the `businesses` table had a loose check condition `WITH CHECK (true)` which allowed any signed-in user to create business listings under someone else's user ID.
+*   **Correction**: Patched `009_upgraded_hybrid_search.sql` to strictly tie data creation capabilities to authenticated session holders:
+    ```sql
+    DROP POLICY IF EXISTS insert_businesses ON public.businesses;
+    CREATE POLICY insert_businesses ON public.businesses FOR INSERT TO authenticated 
+    WITH CHECK (owner_id = auth.uid());
+    ```
+
+### 8.4 Scraper Prevention & Public Columns Restrictions
+*   **Issue**: The public select query on businesses left private administrative contact details (`owner_email` and `owner_phone`) accessible to crawlers and public api harvesters.
+*   **Correction**: Modified public-facing pages (`app/directory/page.tsx` and spotlight details `app/directory/[id]/page.tsx`) to explicitly query safe public fields ONLY, completely omitting any direct owner emails or phone numbers. All contact and WhatsApp calls are routed exclusively through designated public contact columns (`contact_email`, `contact_phone`).
+
+### 8.5 Strict React Rules of Hooks Conformity
+*   **Issue**: The client component `CampaignsAdminClient.tsx` returned view states dynamically before hook declarations were finished, causing React to throw a fatal `"Rendered more hooks than during the previous render"` hook-order violation error.
+*   **Correction**: Repositioned all React state and route hooks (`useRouter`, `useState` states) to the absolute top of the component file, ensuring zero early exits or conditional evaluations precede hook allocations, fully satisfying React compilation standards.

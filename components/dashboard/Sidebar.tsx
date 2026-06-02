@@ -21,7 +21,8 @@ import {
   Zap,
   BarChart3,
   Home,
-  Globe
+  Globe,
+  LayoutDashboard
 } from "lucide-react";
 import { Profile } from "@/types/database.types";
 
@@ -59,6 +60,7 @@ export default function Sidebar({ profile }: SidebarProps) {
       case "super_admin":
       case "region_admin":
         roleLinks = [
+          { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
           { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
           { name: "User Audit", href: "/dashboard/users", icon: Users },
           { name: "Regions Directory", href: "/dashboard/regions", icon: MapPin },
@@ -68,6 +70,7 @@ export default function Sidebar({ profile }: SidebarProps) {
         break;
       case "business_owner":
         roleLinks = [
+          { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
           { name: "My Business", href: "/dashboard/business", icon: Briefcase },
           { name: "Lead Center", href: "/dashboard/leads", icon: Mail },
           { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },

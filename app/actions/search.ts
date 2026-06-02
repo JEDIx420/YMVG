@@ -32,7 +32,7 @@ export async function performHybridSearch(
 
     // Stage 1: Empty Query Bypass (Category/Location-only browsing)
     if (!trimmedQuery) {
-      let query = supabase.from('businesses').select('*');
+      let query = supabase.from('businesses').select('id, brand_name, category, description, services, special_offer, address, tagline, website_url, logo_url, primary_image_url, gallery_urls, sponsorship_tier, ym_region, ym_club, ym_designation');
       
       if (category && category !== 'All') {
         query = query.eq('category', category);

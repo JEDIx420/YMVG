@@ -35,7 +35,31 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("businesses")
-        .select("*")
+        .select(`
+          id, 
+          brand_name, 
+          category, 
+          tagline, 
+          description, 
+          contact_email, 
+          contact_phone, 
+          website_url, 
+          address, 
+          city, 
+          state, 
+          country, 
+          ym_region, 
+          ym_district, 
+          ym_zone, 
+          ym_club, 
+          ym_designation, 
+          services, 
+          special_offer, 
+          logo_url, 
+          brochure_url, 
+          primary_image_url, 
+          owner_name
+        `)
         .eq("id", id)
         .single();
       
@@ -331,9 +355,9 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
                 </div>
 
                 <div className="space-y-4">
-                  {(b.contact_phone || b.owner_phone) && (
+                  {b.contact_phone && (
                     <a 
-                      href={getWhatsAppLink(b.contact_phone || b.owner_phone || "", b.brand_name || "Business")}
+                      href={getWhatsAppLink(b.contact_phone, b.brand_name || "Business")}
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="w-full inline-flex items-center justify-center p-4 bg-[#25D366] hover:bg-[#128C7E] text-white font-black rounded-2xl transition-all shadow-xl shadow-green-500/20 text-lg cursor-pointer hover:scale-[0.98] duration-300"
@@ -346,9 +370,9 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
                     </a>
                   )}
 
-                  {(b.contact_email || b.owner_email) && (
+                  {b.contact_email && (
                     <a 
-                      href={`mailto:${b.contact_email || b.owner_email}?subject=${encodeURIComponent(`Inquiry from Y's Men's International Business Directory - ${b.brand_name}`)}`}
+                      href={`mailto:${b.contact_email}?subject=${encodeURIComponent(`Inquiry from Y's Men's International Business Directory - ${b.brand_name}`)}`}
                       className="w-full inline-flex items-center justify-center p-3.5 bg-blue-950 hover:bg-black text-white font-bold rounded-2xl transition-all shadow-sm text-base cursor-pointer hover:scale-[0.98] duration-300"
                     >
                       <Mail className="w-5 h-5 mr-3 text-red-500" />
