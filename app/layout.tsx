@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://ysmenswir-v.com"),
   alternates: {
-    canonical: "/",
+    canonical: "./",
   },
   title: "Y's Men International | South West India Region",
   description: "Official Business Directory and Regional Hub.",
