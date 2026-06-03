@@ -7,12 +7,9 @@ import {
   Users, 
   Briefcase, 
   Sparkles, 
-  MapPin, 
   TrendingUp, 
   ShieldCheck, 
-  AlertCircle,
   ArrowRight,
-  Compass,
   Activity,
   BarChart3,
   CheckCircle2
@@ -163,87 +160,43 @@ export default function AdminView({
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Recent Activities Log Panel (2/3 width) - LIVE DATA */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-6">
-          <h3 className="text-lg font-black text-blue-950 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 pb-3">
-            <TrendingUp className="w-4 h-4 text-red-600" />
-            <span>Real-time System Actions</span>
-          </h3>
+      {/* Recent Activities Log Panel (Full width) - LIVE DATA */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-6">
+        <h3 className="text-lg font-black text-blue-950 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 pb-3">
+          <TrendingUp className="w-4 h-4 text-red-600" />
+          <span>Real-time System Actions</span>
+        </h3>
 
-          <div className="space-y-4">
-            {recentActivities.length === 0 ? (
-              <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
-                <ShieldCheck className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs text-slate-500">No recent system activities found.</p>
-              </div>
-            ) : (
-              recentActivities.map((log, idx) => (
-                <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-slate-200 hover:bg-slate-100/30 transition-all">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-8 h-8 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
-                      {getActivityIcon(log.type)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-700 truncate leading-relaxed">{log.desc}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{log.type}</span>
-                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                        <div className="flex items-center gap-1">
-                          <span className={`w-1.5 h-1.5 rounded-full ${getStatusColor(log.status)}`}></span>
-                          <span className="text-[9px] font-semibold text-slate-500 uppercase">{log.status}</span>
-                        </div>
+        <div className="space-y-4">
+          {recentActivities.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
+              <ShieldCheck className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <p className="text-xs text-slate-500">No recent system activities found.</p>
+            </div>
+          ) : (
+            recentActivities.map((log, idx) => (
+              <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-slate-200 hover:bg-slate-100/30 transition-all">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="w-8 h-8 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
+                    {getActivityIcon(log.type)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-700 truncate leading-relaxed">{log.desc}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{log.type}</span>
+                      <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                      <div className="flex items-center gap-1">
+                        <span className={`w-1.5 h-1.5 rounded-full ${getStatusColor(log.status)}`}></span>
+                        <span className="text-[9px] font-semibold text-slate-500 uppercase">{log.status}</span>
                       </div>
                     </div>
                   </div>
-                  <span className="text-xs text-slate-400 font-light shrink-0 ml-4">{log.time}</span>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Administration Guidelines / Tools (1/3 width) */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-6 flex flex-col justify-between">
-          <div className="space-y-6">
-            <h3 className="text-lg font-black text-blue-950 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 pb-3">
-              <ShieldCheck className="w-4 h-4 text-red-600" />
-              <span>Admin Toolbox</span>
-            </h3>
-
-            <div className="space-y-3.5">
-              <div className="flex items-start gap-3 p-3 bg-red-50/50 border border-red-100 rounded-2xl">
-                <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-red-800 leading-relaxed font-light">
-                  As an administrator, all modifications you perform across business profiles directly update vector search indices in real time. Use caution when editing.
-                </p>
+                <span className="text-xs text-slate-400 font-light shrink-0 ml-4">{log.time}</span>
               </div>
-
-              <div className="space-y-2.5">
-                <Link
-                  href="/dashboard/regions"
-                  className="w-full flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200/50 rounded-xl hover:bg-slate-100 hover:border-slate-300 font-semibold text-xs text-slate-700 transition-all cursor-pointer"
-                >
-                  <span>Configure SWIR Regions</span>
-                  <MapPin className="w-4 h-4 text-slate-400" />
-                </Link>
-                <Link
-                  href="/directory"
-                  className="w-full flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200/50 rounded-xl hover:bg-slate-100 hover:border-slate-300 font-semibold text-xs text-slate-700 transition-all cursor-pointer"
-                >
-                  <span>View Public Marketplace</span>
-                  <Compass className="w-4 h-4 text-slate-400" />
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-center text-[10px] font-bold text-slate-300 uppercase tracking-widest border-t border-slate-100 pt-4">
-            Security Definer Bypass Active
-          </div>
+            ))
+          )}
         </div>
-
       </div>
 
       {/* Visual Analytics Chart View Section */}

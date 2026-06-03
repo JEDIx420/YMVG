@@ -23,10 +23,14 @@ export default async function BusinessDirectoryPage() {
   }
 
   // Fetch all registered businesses
-  const { data: businesses } = await supabase
+  const { data: businesses, error } = await supabase
     .from("businesses")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("brand_name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching businesses:", error);
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">

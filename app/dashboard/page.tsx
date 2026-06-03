@@ -76,7 +76,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         supabase.from("ad_campaigns").select("*", { count: "exact", head: true }).eq("status", "active"),
         supabase.from("ad_campaigns").select("id, status, boost_multiplier, created_at, businesses(brand_name)").order("created_at", { ascending: false }).limit(5),
         supabase.from("profiles").select("id, full_name, email, app_role, created_at").order("created_at", { ascending: false }).limit(5),
-        supabase.from("businesses").select("id, brand_name, category, created_at").order("created_at", { ascending: false }).limit(5),
+        supabase.from("businesses").select("id, brand_name, category").limit(5),
         supabase.from("businesses").select("category"),
         supabase.from("ad_campaigns").select("status")
       ]);
@@ -101,7 +101,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           activities.push({
             type: "business",
             desc: `New business listing: '${b.brand_name || 'Unnamed'}' under ${b.category || 'Professional'}`,
-            time: b.created_at,
+            time: new Date().toISOString(), // Fallback since businesses table lacks created_at
             status: "success"
           });
         });

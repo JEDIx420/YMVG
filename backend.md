@@ -126,7 +126,7 @@ sequenceDiagram
     participant Auth as Supabase Auth (Google)
     participant Sync as getOrSyncBusiness Action
     participant DB as Postgres Table
-
+   
     User->>Auth: Google Login Redirect
     Auth-->>User: Callback with temporary code
     User->>Auth: Exchange Code for Session
@@ -221,3 +221,30 @@ To keep public listings up to date, the `updateBusiness` server action automatic
 *   **`sync.ts`**: Administrative service-role synchronized utility for sweeping and embedding null vector rows.
 *   **`sendLead.ts`**: Transactional contact mailer with React 19 engine compatibility patches.
 *   **`accessRequest.ts`**: Non-member admin enrollment dispatch pipeline.
+
+---
+
+## 2026-06-03 Integration Audit Report
+
+### 1. Identified Frontend-Backend Disconnects
+- **MemberView.tsx Profile Editor**: Displays member profile information statically (Name, Email, Phone, Club) but completely lacks any Profile Editor form interface, inputs, or edit-toggle states. The UI cannot invoke profile modifications.
+- **Dead Sidebar Navigation Links**:
+  - **`/dashboard/leads`** ("Lead Center" for Business Owners): Renders as a dead link because no `app/dashboard/leads` directory or route page exists.
+  - **`/dashboard/billing`** ("Billing" for Business Owners): Renders as a dead link because no `app/dashboard/billing` directory or route page exists.
+  - **`/dashboard/referrals`** ("Referral Hub" for Members): Renders as a dead link because no `app/dashboard/referrals` directory or route page exists.
+  - **`/dashboard/business`** ("My Business" for Business Owners): Renders as a dead link because the directory only exposes `app/dashboard/business/[id]/edit/page.tsx` and lacks a base index `/dashboard/business/page.tsx`.
+
+### 2. Server Action Deficiencies
+- **Missing Leads Fetch Action**: No Server Action is defined to retrieve, filter, or query customer lead notifications from the `analytics_events` table (or similar tables) to feed a "Lead Center" UI.
+- **Unwired Profile Update Action**: The `updateProfile` Server Action is fully implemented in `app/actions/profiles.ts` but is completely unwired on the frontend because `MemberView.tsx` lacks the visual form component to invoke it.
+
+### 3. Immediate Action Plan
+1. **Refactor `MemberView.tsx`**:
+   - Add state controls (`isEditing`, `setIsEditing`) and validation using standard schemas.
+   - Build out the Profile Edit Form component with inputs for `full_name`, `phone`, and `club`.
+   - Wire the form submission handler to the `updateProfile` Server Action in `app/actions/profiles.ts`.
+2. **Create/Fix Dashboard Routes**:
+   - **`app/dashboard/business/page.tsx`**: Implement a route that fetches the owner's active business profiles from Supabase and redirects them to the edit page (`/dashboard/business/[id]/edit`) or renders a portfolio list.
+   - **`app/dashboard/leads/page.tsx`**: Create the page route and wire it to fetch lead analytics events (i.e. `event_type = 'referral'` or similar) for the owner's business.
+   - **`app/dashboard/billing/page.tsx`**: Create a base user billing portal interface and subscription tier management page.
+   - **`app/dashboard/referrals/page.tsx`**: Add a dedicated Referral Hub view displaying the member scoreboard, points breakdown, and invite templates.

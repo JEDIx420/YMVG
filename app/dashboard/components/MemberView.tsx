@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { updateProfile } from "@/app/actions/profiles";
 import { Profile } from "@/types/database.types";
 import { 
   User, 
@@ -14,7 +16,10 @@ import {
   Award, 
   Compass,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  Edit,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -24,7 +29,20 @@ interface MemberViewProps {
 }
 
 export default function MemberView({ profile, referralCount }: MemberViewProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [fullName, setFullName] = useState(profile.full_name || "");
+  const [phone, setPhone] = useState(profile.phone || "");
+  const [club, setClub] = useState(profile.club || "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFullName(profile.full_name || "");
+    setPhone(profile.phone || "");
+    setClub(profile.club || "");
+  }, [profile]);
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -32,6 +50,29 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
       navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await updateProfile({
+        full_name: fullName,
+        phone: phone,
+        club: club
+      });
+      if (res.success) {
+        setIsEditing(false);
+        router.refresh();
+      } else {
+        setError(res.error || "Failed to update profile.");
+      }
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -65,52 +106,128 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
         {/* Profile Card (1/3 width) */}
         <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-6 flex flex-col justify-between">
           <div className="space-y-6">
-            <h3 className="text-lg font-black text-blue-950 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 pb-3">
-              <User className="w-4 h-4 text-red-600" />
-              <span>Personal Profile</span>
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg text-slate-500 shrink-0">
-                  <User className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Full Name</p>
-                  <p className="text-slate-900 font-bold text-sm truncate mt-1">{profile.full_name}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg text-slate-500 shrink-0">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Email Address</p>
-                  <p className="text-slate-900 font-bold text-sm truncate mt-1">{profile.email}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg text-slate-500 shrink-0">
-                  <Phone className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Contact Phone</p>
-                  <p className="text-slate-900 font-bold text-sm truncate mt-1">{profile.phone || "Not provided"}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg text-slate-500 shrink-0">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Club Affiliation</p>
-                  <p className="text-slate-900 font-bold text-sm truncate mt-1">{profile.club || "Not provided"}</p>
-                </div>
-              </div>
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-lg font-black text-blue-950 uppercase tracking-tight flex items-center gap-2">
+                <User className="w-4 h-4 text-red-600" />
+                <span>Personal Profile</span>
+              </h3>
+              {!isEditing && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-blue-950 transition-all"
+                  title="Edit Profile"
+                >
+                  <Edit className="w-4.5 h-4.5" />
+                </button>
+              )}
             </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+            
+            {isEditing ? (
+              <form onSubmit={handleSave} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm font-semibold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Contact Phone</label>
+                  <input
+                    type="text"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm font-semibold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Club Affiliation</label>
+                  <input
+                    type="text"
+                    required
+                    value={club}
+                    onChange={(e) => setClub(e.target.value)}
+                    className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm font-semibold"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 py-2 bg-blue-950 hover:bg-black text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setFullName(profile.full_name || "");
+                      setPhone(profile.phone || "");
+                      setClub(profile.club || "");
+                      setError(null);
+                    }}
+                    className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-100 rounded-lg text-slate-500 shrink-0">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Full Name</p>
+                    <p className="text-slate-900 font-bold text-sm truncate mt-1">{profile.full_name}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-100 rounded-lg text-slate-500 shrink-0">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Email Address</p>
+                    <p className="text-slate-900 font-bold text-sm truncate mt-1">{profile.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-100 rounded-lg text-slate-500 shrink-0">
+                    <Phone className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Contact Phone</p>
+                    <p className="text-slate-900 font-bold text-sm truncate mt-1">{profile.phone || "Not provided"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-100 rounded-lg text-slate-500 shrink-0">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Club Affiliation</p>
+                    <p className="text-slate-900 font-bold text-sm truncate mt-1">{profile.club || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-center gap-1.5 bg-green-50 text-green-700 font-bold text-[10px] uppercase px-3 py-2 rounded-xl mt-4">
