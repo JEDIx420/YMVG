@@ -29,6 +29,7 @@ interface BusinessListItem {
   category: string | null;
   logo_url: string | null;
   city: string | null;
+  website_url: string | null;
 }
 
 interface CampaignItem {
@@ -36,6 +37,7 @@ interface CampaignItem {
   business_id: string;
   status: string;
   boost_multiplier: number;
+  campaign_type: string;
   start_date: string;
   end_date: string;
   created_at: string;
@@ -102,6 +104,7 @@ export default function PromotionsClient({
   const [selectedBusinessId, setSelectedBusinessId] = useState(
     businesses[0]?.id || ""
   );
+  const [campaignType, setCampaignType] = useState<"search_boost" | "homepage_patron">("search_boost");
   const [selectedBoost, setSelectedBoost] = useState(1.5);
   const [startDate, setStartDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -120,6 +123,9 @@ export default function PromotionsClient({
 
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
+  const selectedBusiness = businesses.find((b) => b.id === selectedBusinessId);
+  const hasLogoAndWebsite = !!(selectedBusiness?.logo_url && selectedBusiness?.website_url);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBusinessId) {
@@ -130,13 +136,22 @@ export default function PromotionsClient({
       return;
     }
 
+    if (campaignType === "homepage_patron" && !hasLogoAndWebsite) {
+      setStatus({
+        type: "error",
+        message: "Your listing must have a logo and website URL configured to request a Homepage Patron slot.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setStatus(null);
 
     try {
       const result = await createAdCampaign({
         businessId: selectedBusinessId,
-        boostMultiplier: selectedBoost,
+        campaignType,
+        boostMultiplier: campaignType === "search_boost" ? selectedBoost : 1.0,
         startDate,
         endDate,
       });
@@ -152,6 +167,7 @@ export default function PromotionsClient({
       });
 
       // Reset form states
+      setCampaignType("search_boost");
       setSelectedBoost(1.5);
       setStartDate(new Date().toISOString().split("T")[0]);
       setEndDate(
@@ -291,6 +307,7 @@ export default function PromotionsClient({
               <form onSubmit={handleSubmit} className="space-y-6">
                 
                 {/* Listing selection */}
+                {/* Listing selection */}
                 <div className="space-y-2.5">
                   <label className="text-xs font-bold text-blue-950 uppercase tracking-wider block">
                     Select Target Enterprise listing
@@ -313,67 +330,164 @@ export default function PromotionsClient({
                   </div>
                 </div>
 
-                {/* Boost selection grid */}
+                {/* Campaign Type selection */}
                 <div className="space-y-3">
                   <label className="text-xs font-bold text-blue-950 uppercase tracking-wider block">
-                    Choose Boost Multiplier Tier
+                    Choose Campaign Type
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {BOOST_TIERS.map((tier) => {
-                      const isSelected = selectedBoost === tier.multiplier;
-                      return (
-                        <div
-                          key={tier.name}
-                          onClick={() => setSelectedBoost(tier.multiplier)}
-                          className={`relative p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between h-40 ${
-                            isSelected
-                              ? `border-blue-950 ${tier.bgColor} ring-4 ring-blue-50`
-                              : "border-slate-200 hover:border-slate-300 bg-white"
-                          }`}
-                        >
-                          {tier.recommended && (
-                            <span className="absolute -top-2.5 right-4 bg-red-600 text-white text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full">
-                              Popular
-                            </span>
-                          )}
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-slate-900 text-sm">{tier.name}</span>
-                              <span
-                                className={`text-xl font-black ${
-                                  isSelected ? "text-blue-950" : tier.textColor
-                                }`}
-                              >
-                                {tier.multiplier.toFixed(1)}x
+                    <div
+                      onClick={() => setCampaignType("search_boost")}
+                      className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between h-36 ${
+                        campaignType === "search_boost"
+                          ? "border-blue-950 bg-blue-50/20 ring-4 ring-blue-50"
+                          : "border-slate-200 hover:border-slate-300 bg-white"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900 text-sm">Search Visibility Boost</span>
+                          <TrendingUp className="w-4 h-4 text-blue-900" />
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-light mt-2 leading-relaxed">
+                          Boost your listing's ranking in search results using custom multiplier weights (1.2x to 3.0x).
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                          Search Boost
+                        </span>
+                        <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                          campaignType === "search_boost" ? "border-blue-950 bg-blue-950" : "border-slate-300"
+                        }`}>
+                          {campaignType === "search_boost" && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setCampaignType("homepage_patron")}
+                      className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between h-36 ${
+                        campaignType === "homepage_patron"
+                          ? "border-blue-950 bg-rose-50/10 ring-4 ring-rose-50/20"
+                          : "border-slate-200 hover:border-slate-300 bg-white"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900 text-sm">Homepage Patron Spotlight</span>
+                          <Sparkles className="w-4 h-4 text-red-600" />
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-light mt-2 leading-relaxed">
+                          Showcase your brand logo on the SWIR Directory homepage with a direct link to your website.
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                          Landing Page Grid
+                        </span>
+                        <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                          campaignType === "homepage_patron" ? "border-blue-950 bg-blue-950" : "border-slate-300"
+                        }`}>
+                          {campaignType === "homepage_patron" && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Boost selection grid - conditionally rendered */}
+                {campaignType === "search_boost" ? (
+                  <div className="space-y-3">
+                    <label className="text-xs font-bold text-blue-950 uppercase tracking-wider block">
+                      Choose Boost Multiplier Tier
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {BOOST_TIERS.map((tier) => {
+                        const isSelected = selectedBoost === tier.multiplier;
+                        return (
+                          <div
+                            key={tier.name}
+                            onClick={() => setSelectedBoost(tier.multiplier)}
+                            className={`relative p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between h-40 ${
+                              isSelected
+                                ? `border-blue-950 ${tier.bgColor} ring-4 ring-blue-50`
+                                : "border-slate-200 hover:border-slate-300 bg-white"
+                            }`}
+                          >
+                            {tier.recommended && (
+                              <span className="absolute -top-2.5 right-4 bg-red-600 text-white text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full">
+                                Popular
                               </span>
+                            )}
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-900 text-sm">{tier.name}</span>
+                                <span
+                                  className={`text-xl font-black ${
+                                    isSelected ? "text-blue-950" : tier.textColor
+                                  }`}
+                                >
+                                  {tier.multiplier.toFixed(1)}x
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 font-light mt-2 leading-relaxed">
+                                {tier.description}
+                              </p>
                             </div>
-                            <p className="text-[11px] text-slate-500 font-light mt-2 leading-relaxed">
-                              {tier.description}
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                              Multiplier Weight
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              <div
-                                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
-                                  isSelected
-                                    ? "border-blue-950 bg-blue-950"
-                                    : "border-slate-300"
-                                }`}
-                              >
-                                {isSelected && (
-                                  <div className="w-1 h-1 bg-white rounded-full"></div>
-                                )}
+                            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                Multiplier Weight
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <div
+                                  className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
+                                    isSelected
+                                      ? "border-blue-950 bg-blue-950"
+                                      : "border-slate-300"
+                                  }`}
+                                >
+                                  {isSelected && (
+                                    <div className="w-1 h-1 bg-white rounded-full"></div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* Warning/Instruction if configuration is incomplete */
+                  <div className="space-y-4">
+                    {!hasLogoAndWebsite ? (
+                      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex gap-3 text-amber-800">
+                        <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-xs uppercase tracking-wider block">Configuration Incomplete</h4>
+                          <p className="text-[11px] font-light leading-relaxed">
+                            To request a Homepage Patron campaign, this business listing must have both a **Brand Logo** and a **Website URL** configured in the directory.
+                          </p>
+                          <ul className="list-disc list-inside text-[11px] font-medium mt-1 space-y-0.5">
+                            {!selectedBusiness?.logo_url && <li className="text-amber-700">Missing Business Logo</li>}
+                            {!selectedBusiness?.website_url && <li className="text-amber-700">Missing Website Link</li>}
+                          </ul>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 flex gap-3 text-emerald-800">
+                        <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-xs uppercase tracking-wider block">Ready for Placement</h4>
+                          <p className="text-[11px] font-light leading-relaxed">
+                            Listing has logo image and website URL configured. The logo will link to <a href={selectedBusiness.website_url || undefined} target="_blank" rel="noopener noreferrer" className="underline font-bold text-emerald-700">{selectedBusiness.website_url}</a> once activated.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Campaign Date Ranges */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -413,18 +527,18 @@ export default function PromotionsClient({
                 {/* Action button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (campaignType === "homepage_patron" && !hasLogoAndWebsite)}
                   className="w-full py-3.5 bg-blue-950 hover:bg-black text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs active:scale-95 cursor-pointer mt-2"
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Creating Ad Campaign Request...
+                      Creating Sponsorship Request...
                     </>
                   ) : (
                     <>
                       <Plus className="w-4 h-4" />
-                      <span>Submit Boost Campaign Request</span>
+                      <span>Submit Campaign Request</span>
                     </>
                   )}
                 </button>
@@ -565,7 +679,11 @@ export default function PromotionsClient({
                         </div>
                       </td>
                       <td className="py-4 px-4 text-slate-500 font-light">
-                        {camp.boost_multiplier >= 3.0 ? (
+                        {camp.campaign_type === "homepage_patron" ? (
+                          <span className="text-red-700 font-bold bg-red-50/50 px-2 py-0.5 rounded border border-red-100 text-[10px] uppercase tracking-wide">
+                            Patron Spotlight
+                          </span>
+                        ) : camp.boost_multiplier >= 3.0 ? (
                           <span className="text-blue-900 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 text-[10px] uppercase">
                             Platinum Tier
                           </span>
@@ -584,7 +702,11 @@ export default function PromotionsClient({
                         )}
                       </td>
                       <td className="py-4 px-4 font-black text-blue-950">
-                        {camp.boost_multiplier.toFixed(1)}x
+                        {camp.campaign_type === "homepage_patron" ? (
+                          <span className="text-slate-400 font-light text-xs">—</span>
+                        ) : (
+                          `${camp.boost_multiplier.toFixed(1)}x`
+                        )}
                       </td>
                       <td className="py-4 px-4 text-slate-500 font-light text-xs">
                         <span>{startFormatted}</span>

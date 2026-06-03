@@ -40,6 +40,25 @@ export async function sendLead(formData: z.infer<typeof leadSchema>) {
       };
     }
 
+    // 2.5 Store lead in public.leads database
+    const { error: insertLeadError } = await supabase
+      .from("leads")
+      .insert({
+        business_id: validatedData.businessId,
+        sender_name: validatedData.name,
+        sender_email: validatedData.email,
+        sender_phone: validatedData.phone,
+        message: validatedData.message
+      });
+
+    if (insertLeadError) {
+      console.error("Failed to store lead in database:", insertLeadError);
+      return {
+        success: false,
+        error: "Failed to submit inquiry. Please try again later."
+      };
+    }
+
     // 3. Manual Rendering for React 19 Compatibility
     // This bypasses Resend's internal legacy render methods that throw "render is not a function"
     const htmlContent = await render(React.createElement(LeadEmail, {

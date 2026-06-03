@@ -32,7 +32,7 @@ export default async function PromotionsPage() {
   // 1. Fetch user's business listings
   // If admin, fetch all businesses so they can test/create campaigns.
   // Otherwise, only fetch businesses owned by the authenticated owner.
-  let businessesQuery = supabase.from("businesses").select("id, brand_name, category, logo_url, city");
+  let businessesQuery = supabase.from("businesses").select("id, brand_name, category, logo_url, city, website_url");
   if (!isAdmin) {
     businessesQuery = businessesQuery.eq("owner_id", user.id);
   }

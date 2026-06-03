@@ -441,6 +441,35 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              {/* Primary Showcase Image Upload */}
+              <div className="space-y-4 md:col-span-2">
+                <label className="text-sm font-bold text-blue-950 block">Primary Showcase / Cover Image</label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                  <div className="w-full sm:w-64 h-36 rounded-xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative shadow-sm">
+                    {primaryImageUrl ? (
+                      <img src={primaryImageUrl} alt="Cover Showcase" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon className="w-8 h-8 text-slate-300" />
+                    )}
+                    {isUploading.primary_image_url && (
+                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                      </div>
+                    )}
+                  </div>
+                  <label className="cursor-pointer px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+                    <Upload className="w-4 h-4" />
+                    Upload Cover Image
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*" 
+                      onChange={(e) => handleFileUpload(e, 'business-images', 'primary_image_url')}
+                    />
+                  </label>
+                </div>
+              </div>
+
               {/* Logo Upload */}
               <div className="space-y-4">
                 <label className="text-sm font-bold text-blue-950 block">Company Logo</label>

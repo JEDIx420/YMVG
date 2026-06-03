@@ -6,6 +6,5 @@
 - [x] **Phase 5: AI Semantic Search** (NVIDIA NIM Server Action, RRF Hybrid Search RPC)
 - [x] **Phase 6: Authentication & Portals** (Google OAuth @supabase/ssr, Dashboard Auto-Match)
 - [/] **Phase 8: Regional Hub & Heritage Expansion** (Heritage Static Routes, SWIR Local Leadership directory, Mega-Menu navigation)
-- [ ] **Phase 3: Data Ingestion** (Node.js CSV Parser, Google Drive Image Pipeline)
-- [ ] **Phase 7: Profile Management** (Owner Edit Profile forms, Supabase Storage uploads)
+- [x] **Phase 7: Profile Management** (Owner Edit Profile forms, Supabase Storage uploads)
 - [ ] **Phase 9: Lead Generation** (Public contact forms, Lead tracking in Dashboard)

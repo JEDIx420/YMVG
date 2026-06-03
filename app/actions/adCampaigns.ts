@@ -7,17 +7,27 @@ import { getCurrentProfile } from "./profiles";
 
 const campaignSchema = z.object({
   businessId: z.string().uuid("Invalid Business ID format."),
-  boostMultiplier: z.number().min(1.1, "Boost multiplier must be at least 1.1x.").max(3.0, "Boost multiplier limit is 3.0x."),
+  campaignType: z.enum(["search_boost", "homepage_patron"]),
+  boostMultiplier: z.number().min(1.0, "Boost multiplier must be at least 1.0x.").max(3.0, "Boost multiplier limit is 3.0x."),
   startDate: z.string().refine(val => !isNaN(Date.parse(val)), "Invalid start date."),
   endDate: z.string().refine(val => !isNaN(Date.parse(val)), "Invalid end date."),
+}).refine(data => {
+  if (data.campaignType === "search_boost" && data.boostMultiplier < 1.1) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Search boost multiplier must be at least 1.1x.",
+  path: ["boostMultiplier"]
 });
 
 /**
- * Creates a new pending advertising boost campaign for a business listing.
+ * Creates a new pending advertising boost or homepage patron campaign for a business listing.
  * Restricts creation to the verified business owner.
  */
 export async function createAdCampaign(formData: {
   businessId: string;
+  campaignType: "search_boost" | "homepage_patron";
   boostMultiplier: number;
   startDate: string;
   endDate: string;
@@ -47,8 +57,9 @@ export async function createAdCampaign(formData: {
         .from("ad_campaigns")
         .insert({
           business_id: validated.businessId,
+          campaign_type: validated.campaignType,
           status: "pending",
-          boost_multiplier: validated.boostMultiplier,
+          boost_multiplier: validated.campaignType === "search_boost" ? validated.boostMultiplier : 1.0,
           start_date: new Date(validated.startDate).toISOString(),
           end_date: new Date(validated.endDate).toISOString(),
         })

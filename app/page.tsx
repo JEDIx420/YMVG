@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Globe, Clock, Heart, Handshake } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { getActivePatrons } from "@/app/actions/campaigns";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -181,6 +182,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Esteemed Patrons Grid Section */}
+      <EsteemedPatronsGrid />
+
       {/* Step 3: Content Section 2 - The Y's Men's International Marketplace with Reveal */}
       <section className="py-32 bg-slate-50 relative overflow-hidden">
         <motion.div 
@@ -218,5 +222,74 @@ export default function LandingPage() {
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-600/5 blur-3xl rounded-full translate-y-1/2 -translate-x-1/2"></div>
       </section>
     </div>
+  );
+}
+
+function EsteemedPatronsGrid() {
+  const [patrons, setPatrons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await getActivePatrons();
+        if (res.success && res.data) {
+          setPatrons(res.data);
+        }
+      } catch (err) {
+        console.error("Error loading patrons:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-10 bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-950"></div>
+      </div>
+    );
+  }
+
+  if (patrons.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="py-20 bg-white border-t border-slate-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-12">
+        <div className="space-y-3">
+          <span className="inline-flex items-center gap-2 px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full uppercase tracking-widest block w-fit mx-auto">
+            Esteemed Patrons
+          </span>
+          <h2 className="text-3xl md:text-5xl font-black text-blue-950 tracking-tight mt-2">
+            Our Homepage Patrons
+          </h2>
+          <div className="w-16 h-1 bg-red-600 mx-auto rounded-full mt-4"></div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-8">
+          {patrons.map((patron) => (
+            <motion.a
+              key={patron.campaignId}
+              href={patron.websiteUrl || `/directory/${patron.businessId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.05 }}
+              className="p-6 bg-slate-50 border border-slate-200/50 rounded-3xl flex items-center justify-center h-24 w-48 hover:shadow-md transition-all shadow-sm cursor-pointer"
+              title={patron.brandName}
+            >
+              {patron.logoUrl ? (
+                <img src={patron.logoUrl} alt={patron.brandName} className="max-h-full max-w-full object-contain" />
+              ) : (
+                <span className="font-bold text-sm text-slate-400 text-center line-clamp-2">{patron.brandName}</span>
+              )}
+            </motion.a>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
