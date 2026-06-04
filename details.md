@@ -1,12 +1,12 @@
 # Y's Men International (SWIR) - Comprehensive Technical Documentation
 
-This document provides a highly comprehensive, production-grade technical breakdown of the Y's Men International South West India Region (SWIR) Business Directory and Regional Hub website. It details the complete architecture, tech stack, database schemas, AI-driven hybrid search pipeline, security controls, dynamic page designs, and search engine optimization (SEO) configurations.
+This document provides a highly comprehensive, production-grade technical breakdown of the Y's Men International South West India Region (SWIR) Business Directory and Regional Hub website. It details the complete architecture, tech stack, database schemas, AI-driven hybrid search pipeline, security controls, dynamic page designs, partner tooling, monetization features, and search engine optimization (SEO) configurations.
 
 ---
 
 ## 1. High-Level Architecture & Tech Stack
 
-The application is built on a modern, modern-aesthetic framework utilizing a split client-server model in Next.js. It achieves maximum visual impact through curated animations and micro-interactions, backed by secure, high-performance database queries and AI semantic search.
+The application is built on a modern, modern-aesthetic framework utilizing a split client-server model in Next.js. It achieves maximum visual impact through curated animations and micro-interactions, backed by secure, high-performance database queries, attribution analytics, and AI semantic search.
 
 ```mermaid
 graph TD
@@ -70,21 +70,87 @@ The primary domain model is the `businesses` table. It holds all record details,
 | `embedding` | `vector(1024)` | 1024-dimensional dense vector representing the brand text. |
 | `brochure_url` | `text` | Link to the uploaded PDF brochure. |
 
-### Row-Level Security (RLS) Rules
-To protect member privacy, RLS policies are strictly enforced:
+### The `leads` Table
+Created in Phase 8 to act as the core database store for initial directory spotlights inquiries before they are dispatched via email.
+
+| Column Name | PostgreSQL Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Auto-generated UUID. |
+| `business_id` | `uuid` (FK) | Links to the `public.businesses` listing. |
+| `sender_name` | `text` | Name of the customer submitting the inquiry. |
+| `sender_email` | `text` | Email address of the customer. |
+| `sender_phone` | `text` | Contact phone number of the customer. |
+| `message` | `text` | Text body of the customer inquiry. |
+| `created_at` | `timestamp with time zone` | Timestamp when the lead was stored (UTC). |
+
+### The `ad_campaigns` Table
+Created in Phase 1 and updated in Phase 8 to support both Search Boosts and Homepage Patron placements.
+
+| Column Name | PostgreSQL Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Auto-generated UUID. |
+| `business_id` | `uuid` (FK) | Links to the target business listing. |
+| `status` | `text` (Check constraint) | Status: `draft`, `pending`, `active`, `paused`, `expired`. |
+| `campaign_type` | `text` (Check constraint)| Type: `search_boost` or `homepage_patron` (default `search_boost`). |
+| `boost_multiplier`| `float` | Sorting boost factor (defaults to `1.0`; minimum `1.1` for search boosts). |
+| `start_date` | `timestamp with time zone` | Start date of active promotion. |
+| `end_date` | `timestamp with time zone` | Expiration date of promotion. |
+| `created_at` | `timestamp with time zone` | Record creation timestamp. |
+
+---
+
+## 3. Row-Level Security (RLS) Rules
+
+To protect member privacy, RLS policies are strictly enforced across tables:
+
+### `businesses` Table RLS
 *   **Anonymous Select**: Allowed only for public columns (`brand_name`, `category`, `description`, `services`, `special_offer`, `logo_url`, `primary_image_url`, `ym_club`). Public users *cannot* access owner PII columns.
 *   **Authenticated Select (Self)**: Users can query all fields (including PII) of rows matching `owner_id = auth.uid()`.
 *   **Authenticated Update**: Allowed only if the user's `auth.uid()` matches the `owner_id` of the record, preventing unauthorized editing of directory listings.
 
+### `leads` Table RLS
+*   **Insert Leads (Anonymous / Authenticated)**: Allows visitors (anonymous) and members to submit contact inquiries on spotlight listings:
+    ```sql
+    CREATE POLICY insert_leads ON public.leads FOR INSERT TO anon, authenticated WITH CHECK (true);
+    ```
+*   **Select Leads (Authenticated Owner / Admin Bypass)**: Restricted strictly to database admins or the business owner whom the lead is scoped to:
+    ```sql
+    CREATE POLICY select_leads ON public.leads FOR SELECT TO authenticated
+    USING (
+      public.get_my_role() IN ('super_admin'::app_role, 'region_admin'::app_role)
+      OR EXISTS (
+        SELECT 1 FROM public.businesses b
+        WHERE b.id = business_id AND b.owner_id = auth.uid()
+      )
+    );
+    ```
+
+### `ad_campaigns` Table RLS
+*   **Select Campaigns**: Admins and the listing owner can read campaign information.
+*   **Insert Campaigns**: Listing owners can create campaign drafts.
+*   **Update Campaigns**: Admins can update any campaign status. Listing owners can only update campaigns if they are in `'draft'` status.
+
+---
+
+## 4. The Hybrid Search & Semantic Vector Pipeline
+
+The YMI Directory features a highly advanced **Hybrid Search Pipeline** that fuses keyword matches with AI semantic intent matches using **Reciprocal Rank Fusion (RRF)**.
+
+```mermaid
+flowchart TD
+    A[User Inputs Search Query] --> B{Is Search Query Empty?}
+    B -- Yes --> C[Simple Category Database Fetch]
+    B -- No --> D[Generate 1024-D Embedding via NVIDIA NIM]
+    D --> E[Call Supabase hybrid_search_businesses RPC]
+    E --> F[Full-Text Search keyword match]
+    E --> G[Cosine Distance vector similarity match]
+    F & G --> H[Calculate RRF Fusion Score]
+    H --> I[Apply Dynamic Relational Drop-off Filter]
+    I --> J[Normalize Scores & Render Results]
+```
+
 ### The `hybrid_search_businesses` PostgreSQL RPC Signature
-
-To perform reciprocal rank fusion hybrid searches, we define the following secure RPC signature in the PostgreSQL database (updated to **1024-dimensional** pgvector via migration `007_resize_vector_dimensions.sql`).
-
-> [!WARNING]
-> **Schema Mismatch Alert**: In the current database migrations (specifically `007_resize_vector_dimensions.sql`), the `hybrid_search_businesses` function **does not** accept a `location_filter` parameter and only filters by `category_filter`. However, the middle-tier server action in `app/actions/search.ts` invokes the RPC passing `location_filter` to the query. To ensure absolute operational safety, either the database function should be updated to accept `location_filter` or the application code should be aligned with the database signature.
-
-Below is the **actual** RPC signature defined in `007_resize_vector_dimensions.sql`:
-
+Below is the RPC signature defined in `007_resize_vector_dimensions.sql`:
 ```sql
 CREATE OR REPLACE FUNCTION hybrid_search_businesses(
   query_embedding vector(1024),          -- Deployed 1024-D vector type
@@ -163,220 +229,78 @@ as $$
 $$;
 ```
 
-### Data Structure & Validation Constraints
-*   **`services` Column Schema**: Stored within Supabase `JSONB` as a flat string array:
-    ```json
-    ["Web Development", "UI/UX Design", "GTM Automation"]
-    ```
-*   **Onboarding File Validation Rules (Zod Validation)**:
-    *   **`logo_url` & `primary_image_url`**: Max **5MB** file size per asset; restricted to web-optimized image MIME types (`image/jpeg`, `image/png`, `image/webp`).
-    *   **`brochure_url`**: Max **15MB** file size; restricted strictly to dynamic PDFs (`application/pdf`).
-
----
-
-## 3. The Hybrid Search & Semantic Vector Pipeline
-
-The YMI Directory features a highly advanced **Hybrid Search Pipeline** that fuses keyword matches with AI semantic intent matches using **Reciprocal Rank Fusion (RRF)**. This ensures that a query like "expert consulting" matches listings mentioning "management advisors" even if the exact words differ.
-
-```mermaid
-flowchart TD
-    A[User Inputs Search Query] --> B{Is Search Query Empty?}
-    B -- Yes --> C[Simple Category Database Fetch]
-    B -- No --> D[Generate 1024-D Embedding via NVIDIA NIM]
-    D --> E[Call Supabase hybrid_search_businesses RPC]
-    E --> F[Full-Text Search keyword match]
-    E --> G[Cosine Distance vector similarity match]
-    F & G --> H[Calculate RRF Fusion Score]
-    H --> I[Apply Dynamic Relational Drop-off Filter]
-    I --> J[Normalize Scores & Render Results]
-```
-
-### Step-by-Step Search Mechanics
-
-1.  **Payload Normalization & Vector Generation (`getEmbedding.ts`)**:
-    *   **Structured Metadata scrubbing**: Before calling the embedding pipeline, the text is scrubbed of all newlines and compiled into a uniform string block:
-        ```text
-        Company: [brand_name] | Location: [city, state, country] | Category: [category] | Description: [description] | Core Expertise: [services array joined by commas]
-        ```
-    *   This structured block is dispatched to the NVIDIA NIM Embedding API using the `nvidia/nv-embedqa-e5-v5` model.
-    *   This API yields a highly detailed 1024-dimensional dense array representing the semantic core of the business profile.
-2.  **Database Vector Fusion Query (`search.ts`)**:
-    *   The generated embedding and the raw search text are passed to a Supabase PostgreSQL function (RPC) named `hybrid_search_businesses`.
-    *   This RPC runs two separate queries:
-        *   **Full-Text Search (FTS)** matching the search text against a search-optimized index (made of `brand_name`, `description`, `category`, and `services`).
-        *   **Semantic Match** calculating the Cosine Similarity between the query's 1024-D embedding vector and the business record's `embedding` vector using the `<=>` pgvector operator.
-3.  **Reciprocal Rank Fusion (RRF) & Tuning Parameters**:
-    *   The database combines the ranked results of the two searches using the RRF algorithm with a default tuning constant **$k = 60$** and a 70/30 weight distribution ratio:
-        $$\text{RRF Score} = \left(\frac{1}{60 + R_{\text{Semantic}}} \times 0.7\right) + \left(\frac{1}{60 + R_{\text{FTS}}} \times 0.3\right)$$
-        *where $R$ is the rank index of the item (1-indexed) in the respective search result sets.*
-4.  **Dynamic Relational Drop-off Filter**:
-    *   To prevent displaying completely irrelevant results at the end of the list, a dynamic relational filter is applied:
-        $$\text{Score}_{\text{Minimum}} = \text{Score}_{\text{Top}} \times 0.50$$
-    *   Any result that scores below 50% of the top match's score is dynamically filtered out on the server side, keeping listings highly relevant.
-5.  **Score Normalization**:
-    *   Since RRF scores are naturally tiny fractions, they are normalized by multiplying by 61 to map them to a clean percentage scale ($0.0 \text{ to } 1.0$) for visual rendering in the user interface.
-
-
----
-
-## 4. Authentication, Closed-Claiming, & VIP Onboarding Flow
-
-To keep the ecosystem exclusive and verified, the directory relies on a **Closed-Claiming** system. Members are pre-populated via verified administration lists, and new profiles must go through a secure verification workflow.
-
-### The Auto-Claim Engine (`getOrSyncBusiness.ts`)
-When a member logs in using Google OAuth, the system automatically checks if they are a pre-registered Y's Men business owner:
-1.  It queries the `businesses` table for any row containing an `owner_email` that matches the logged-in user's Google Email **and** where `owner_id` is currently `null` (unclaimed stub).
-2.  If it finds a match, it updates the record by setting the `owner_id` to the user's unique auth UUID. 
-3.  This securely binds the business profile to that user without requiring manual admin verification.
-
-### The VIP Verification Workflow
-If a member's Google email does not match a pre-registered stub, they must undergo the VIP onboarding flow:
-1.  **IMIS ID Entry**: The user inputs their official **YMI IMIS ID** (e.g., `YMI-98765`) and their registered contact email.
-2.  **Security Cookie Lock**: The system sets an encrypted, short-lived cookie (`imis_id`) that expires in 15 minutes.
-3.  **Cross-Database Match**: A server action validates that a business profile exists in the database where `contact_email = user.email` and `imis_id = input_imis_id`.
-4.  **Ownership Binding**: Upon verification, the `owner_id` is bound to the logged-in user, granting them full dashboard access.
-
 ---
 
 ## 5. Detailed Route Directory
 
 ### Public Routes
-
 *   **Homepage (`/`)**:
-    *   *Features*: Rich hero animation, parallax scroll banner containing the official Y's Men motto, staggered stats grid showcasing international presence (80+ nations, 100+ years), and legacy navigation.
-    *   *Boundaries*: Fully static for instant initial rendering.
+    *   *Features*: Rich hero animation, parallax scroll banner containing the official Y's Men motto, staggered stats grid showcasing international presence, legacy navigation.
+    *   *Monetization Showcase*: Mounts the dynamic `<EsteemedPatronsGrid />` component. This fetches all active homepage patron campaigns via `getActivePatrons` server action and displays their logos, linking them directly to their external websites in a clean, animated layout.
 *   **History Page (`/about/history`)**:
     *   *Features*: A detailed vertical chronological timeline tracing the Y's Men legacy from Toledo, Ohio in 1922, through the Ceylon/India Area expansion, to the centennial jubilee and modern digital leap.
-    *   *Motion*: Timelines slide in and fade sequentially based on scroll view triggers.
 *   **Philosophy Page (`/about/philosophy`)**:
     *   *Features*: Premium multi-panel cards presenting the core pillars: **Duty**, **Service**, **Fellowship**, and **International Peace**. Hovering over cards triggers seamless color-inverting transitions.
 *   **Marketplace Directory (`/directory`)**:
-    *   *Features*: Serves as the central hub of search. Initially loaded on the server (RSC) to serve the first 100 businesses instantly to search engine crawlers. Dynamically hands control to the client-side `DirectoryClient` for instant category switching, location filtering, and hybrid search triggers.
-    *   *Zero-Hardcoding Dynamic Option Collectors*: The UI category and city dropdown selection elements are fully dynamic. On component mount, the system queries the database via server-side actions in parallel using `Promise.all` (`getUniqueCategories()` and `getUniqueCities()`) to fetch distinct values directly from active business listings, ensuring immediate synchronization as profiles are updated.
-    *   *Geographic Location Selector UI*: Includes a location select element featuring a map indicator icon (📍), matching the visual design, height, rounded borders (`rounded-2xl`), font size weight parameters, and category selector layout parity.
-    *   *Directory Automatic Fallback Workflow (`DirectoryClient.tsx`)*: If a category filter or location filter is active and the search query returns `0` results:
-        1. The client-side component catches the zero-length results array.
-        2. It automatically sets the category filter state back to `'All'`.
-        3. It immediately triggers a fallback query across the entire database directory using the original search query.
-        4. It displays a clear layout alert banner: *"No direct matches found in this category. Expanding search across all categories."* to ensure user onboarding is seamless and informative.
-
+    *   *Features*: Serves as the central hub of search. Catches dynamic `?ref=UUID` search query parameters in the URL, generating a click record in `analytics_events` of type `'referral'` associated with the referring member's profile ID. Category and city dropdown elements are fully dynamic.
+    *   *Directory Automatic Fallback Workflow*: If a category filter or location filter is active and the search query returns `0` results, it automatically resets the category filter state back to `'All'` and triggers a fallback query across the entire database directory, displaying a warning banner.
 *   **Spotlight Detail Page (`/directory/[id]`)**:
-    *   *Features*: A premium business profile featuring interactive slide-out enquiry forms, custom gallery layouts, promotional vouchers ("Member Offers"), and a sticky contact sidebar displaying their local Y's Men club and district status.
-*   **Regional Leadership Directory (`/region/leadership`)**:
-    *   *Features*: Grid layout displaying cabinet roles, district leaders, and the Regional Director's profile. Includes click-to-copy handlers for phone numbers and emails.
-*   **Regional Calendar (`/region/calendar`)**:
-    *   *Features*: Houses the schedule of Regional and Area programs. Includes instantaneous local filtering by event titles, districts, and months with alternate grid/timeline layout options.
+    *   *Features*: A premium business profile featuring interactive slide-out inquiry forms, gallery layouts, and a sticky contact sidebar. When a contact form is submitted, the server action `sendLead` stores the message payload directly in the `leads` table before dispatching the email via Resend.
+*   **Regional Leadership Directory (`/region/leadership`)**: Cabinet roles and district leader profiles.
+*   **Regional Calendar (`/region/calendar`)**: Schedule of Regional and Area programs.
+*   **Auth Error Page (`/auth/auth-error`)**:
+    *   *Features*: Catches authentication issues or database trigger failures. Parses URL `searchParams` (`error` or `error_description`) to display a branded warning card with helpful instructions regarding Google logins and IMIS ID bindings, alongside CTAs to retry or return home.
 
-### Private & Administrative Routes
-
+### Private & Dashboard Routes
 *   **Dashboard (`/dashboard`)**:
     *   *Features*: A secure interface displaying the logged-in user's active business profile. Showcases verification status, profile completeness stats, and quick actions to edit profiles.
-*   **Onboarding Form (`/dashboard/onboarding`)**:
-    *   *Features*: A clean, interactive form built with React Hook Form and validated with Zod schemas. Handles:
-        *   Multi-field details (brand description, tagline, services array).
-        *   Direct files upload (logo, banner, brochure) to Supabase Storage.
-        *   **Automatic Embedding Regeneration**: Saving the form compiles the new brand profile text and requests a new 1024-D embedding from the NVIDIA NIM API to ensure search indexes are instantly updated.
+*   **Onboarding Form (`/dashboard/onboarding`)**: Handles multi-field details and file uploads (logo, banner, brochure) to Supabase Storage, regenerating search embeddings automatically.
+*   **Leads CRM Inbox (`/dashboard/leads`)**:
+    *   *Features*: A unified Lead Center Inbox UI for business owners. Fetches leads associated with the owner's active listings and displays them in a clean, glassmorphic list-detail split viewport to track incoming customer requests.
+*   **Referrals Scoreboard Hub (`/dashboard/referrals`)**:
+    *   *Features*: Visual scorecard displaying total verified referrals driven by the logged-in member. Provides a quick link copy button (`/directory?ref=MEMBER_ID`) to share listings on WhatsApp/email.
+*   **Owner Analytics Portal (`/dashboard/analytics?view=owner`)**:
+    *   *Features*: Renders overview cards for Showcase Views and Member Referrals. Contains a 7-day attribution line chart and a **Top Referrers Leaderboard** listing other Y's Men members who have driven clicks to the owner's listings.
+*   **Promotions Visbility Portal (`/dashboard/promotions`)**:
+    *   *Features*: Allows listing owners to request new sponsorships. Users select between a Search Boost (`search_boost`) or a Homepage Patron Spotlight (`homepage_patron`). If they select Patron Spotlight, it dynamically checks if their listing has a logo image and a website URL, disabling submissions if incomplete.
 
 ---
 
-## 6. SEO, Sitemap, & Google Search Console Architecture
+## 6. Authentication, Closed-Claiming, & VIP Onboarding Flow
+
+To keep the ecosystem exclusive and verified, the directory relies on a **Closed-Claiming** system. Members are pre-populated via verified administration lists.
+
+### The Auto-Claim Engine (`getOrSyncBusiness.ts`)
+When a member logs in using Google OAuth, the system automatically checks if they are a pre-registered Y's Men business owner:
+1.  It queries the `businesses` table for any row containing an `owner_email` that matches the logged-in user's Google Email **and** where `owner_id` is currently `null` (unclaimed stub).
+2.  If a stub is matched, the engine triggers a transaction:
+    *   Updates the business by setting `owner_id = user.id`.
+    *   Updates the profile by setting the user's `app_role = 'business_owner'`.
+3.  This securely binds the business profile to that user without requiring manual admin verification.
+
+---
+
+## 7. SEO, Sitemap, & Google Search Console Architecture
 
 The site implements high-level search engine optimizations to ensure search snippets look premium and index quickly on Google.
 
 ### Sitemap & Crawler Configuration (`app/sitemap.ts`)
 We utilize Next.js's dynamic sitemap builder which outputs a standard XML sitemap at `/sitemap.xml`.
-*   **Static Pages**: Pre-loaded in the sitemap with optimal search priorities ($1.0$ for Home, $0.9$ for Directory, $0.8$ for sub-pages).
-*   **Dynamic Profiles Indexing**: The sitemap imports `@supabase/supabase-js` to run an anonymous server-side database query, fetching the IDs of all active businesses. It maps them into live URLs (e.g. `/directory/UUID`) alongside their database `updated_at` timestamps.
-*   **Static/Dynamic Hybrid Build**: By querying Supabase anonymously without cookie context, the sitemap compiles perfectly as a pre-rendered static route with a 1-hour cache revalidation, completely eliminating dynamic server headers warnings.
-
-### Indexing Guidelines (`app/robots.ts`)
-The `robots.ts` file ensures indexers only crawl useful pages and ignore private admin paths:
-```typescript
-{
-  rules: {
-    userAgent: "*",
-    allow: "/",
-    disallow: [
-      "/dashboard",
-      "/dashboard/",
-      "/auth",
-      "/auth/",
-      "/unauthorized",
-      "/login",
-      "/actions",
-      "/actions/",
-    ],
-  },
-  sitemap: "https://ysmenswir-v.com/sitemap.xml",
-}
-```
-
-### Favicon & Search Logo Branding
-*   **Favicon Standards**: We replaced the Next.js default Vercel favicon with a custom-padded, perfectly square brand logo ($144\text{px} \times 144\text{px}$) saved as `public/favicon.png` and `public/favicon.ico`. This meets Google's strict square, multiple-of-48px favicon rules.
-*   **JSON-LD Structured Data**: Detail the structural schema architectures injected into the Next.js root layout header:
-    *   **`WebSite` Schema**: Injected into the root layout's HTML head to explicitly notify search engines of the primary site name along with an array of alternate name spellings:
-        ```json
-        {
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          "name": "Y's Men International South West India Region",
-          "alternateName": ["Y's Men SWIR", "YMI SWIR Business Hub", "Ys Men SWIR Directory"],
-          "url": "https://ysmenswir-v.com"
-        }
-        ```
-    *   **`Organization` Schema**: Maps the official website URL directly to the brand's logo image to display knowledge panels on search result sidebars:
-        ```json
-        {
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          "name": "Y's Men International SWIR",
-          "url": "https://ysmenswir-v.com",
-          "logo": "https://ysmenswir-v.com/favicon.png",
-          "sameAs": [
-            "https://www.ysmen.org"
-          ]
-        }
-        ```
+*   **Dynamic Profiles Indexing**: The sitemap query fetches the IDs of all active businesses anonymously without cookie context, allowing the sitemap to compile perfectly as a pre-rendered static route with a 1-hour cache revalidation.
+*   **Indexation Rules (`app/robots.ts`)**: Disallows crawling on administrative paths (`/dashboard`, `/auth`, `/actions`).
+*   **JSON-LD Structured Data**: Injects Organization and WebSite schema graphs in the root layout metadata header for search snippet optimizations.
 
 ---
 
-## 7. Folder & Directory Structure Map
+## 8. Summary of Server Actions Directory
 
-```text
-├── app/
-│   ├── about/
-│   │   ├── history/page.tsx       # Chronicles the 1922 legacy
-│   │   └── philosophy/page.tsx    # Details the 4 core pillars
-│   ├── actions/                   # Next.js Server Actions
-│   │   ├── getEmbedding.ts        # NVIDIA NIM 1024-D Vector API
-│   │   ├── getOrSyncBusiness.ts   # Auto-claims orphaned stubs
-│   │   └── search.ts              # RRF Hybrid Search execution
-│   ├── auth/
-│   │   └── callback/route.ts      # OAuth code/session exchange
-│   ├── dashboard/
-│   │   ├── onboarding/            # Profile creation & edit forms
-│   │   ├── layout.tsx             # Validates active admin session
-│   │   └── page.tsx               # Main business admin dashboard
-│   ├── directory/
-│   │   ├── [id]/page.tsx          # Business spotlight detail page
-│   │   └── page.tsx               # Marketplace listing (Server Component)
-│   ├── region/
-│   │   ├── calendar/page.tsx      # SWIR schedules & timelines
-│   │   └── leadership/page.tsx    # Regional leadership cabinet
-│   ├── globals.css                # Base Tailwind styling configurations
-│   ├── layout.tsx                 # Root layout (Mega-Menu, JSON-LD head scripts)
-│   ├── robots.ts                  # Search crawler directives
-│   ├── sitemap.ts                 # Dynamic XML sitemap generator
-│   └── template.tsx               # Sliding page transition wrapper
-├── components/
-│   ├── DirectoryClient.tsx        # Interactive search list layout
-│   ├── Navbar.tsx                 # Sticky Mega-Menu navigation header
-│   └── Footer.tsx                 # Brand footer with quick navigation links
-├── docs/                          # Architecture blueprints & roadmap docs
-├── public/                        # Core assets (Favicons, logos)
-├── types/                         # TypeScript model definitions
-└── utils/
-    └── supabase/
-        ├── client.ts              # Supabase Client SDK instance
-        └── server.ts              # Supabase Server SDK (Cookie-bound)
-```
+*   **`addBusiness.ts`**: Safely creates a business profile row, captures the generated database ID, triggers the AI vector generator, and updates the embedding.
+*   **`updateBusiness.ts`**: Verifies authenticated session ownership of `businessId`, mutates active listing details, regenerates embeddings, and invalidates page caches.
+*   **`adCampaigns.ts`**: Handles creation, approval, and pausing of ad campaigns. Accepts `campaignType` parameter and maps it to the database table.
+*   **`campaigns.ts`**: Houses public fetches like `getActivePatrons` to hydrate homepage grids.
+*   **`search.ts`**: Entry point for directory queries. Triggers empty query category loads or coordinates NIM query embedding and `hybrid_search_businesses` database RPC execution.
+*   **`getEmbedding.ts`**: Low-level HTTP payload handler communicating directly with the NVIDIA integrate pipeline.
+*   **`getOrSyncBusiness.ts`**: Initial dashboard identity checker and orphan-binding auto-claim coordinator.
+*   **`sync.ts`**: Administrative service-role synchronized utility for sweeping and embedding null vector rows.
+*   **`sendLead.ts`**: Transactional contact mailer that stores customer data in `leads` table before rendering HTML templates and dispatching via Resend.
+*   **`accessRequest.ts`**: Non-member admin enrollment dispatch pipeline.
