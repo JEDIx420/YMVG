@@ -25,6 +25,7 @@ import {
   AlertCircle,
   Loader2,
   Pause,
+  Eye,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -45,6 +46,8 @@ interface CampaignItem {
   id: string;
   business_id: string;
   status: string;
+  campaign_type?: string;
+  payment_proof_url?: string | null;
   boost_multiplier: number;
   start_date: string;
   end_date: string;
@@ -425,12 +428,19 @@ export default function CampaignsAdminClient({
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-3 border-t border-slate-200/50">
                       <div className="bg-white rounded-2xl p-3 border border-slate-200/40 text-center shadow-inner-sm">
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                          Boost Multiplier
+                          Sponsorship Type
                         </p>
-                        <p className="text-xl font-black text-blue-950 mt-1 leading-none flex items-center justify-center gap-1">
-                          <TrendingUp className="w-4 h-4 text-emerald-500" />
-                          <span>{camp.boost_multiplier.toFixed(1)}x</span>
-                        </p>
+                        {camp.campaign_type === "homepage_patron" ? (
+                          <p className="text-[11px] font-black text-rose-700 mt-2.5 leading-none flex items-center justify-center gap-1 uppercase tracking-wide">
+                            <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Patron Grid</span>
+                          </p>
+                        ) : (
+                          <p className="text-xl font-black text-blue-950 mt-1 leading-none flex items-center justify-center gap-1">
+                            <TrendingUp className="w-4 h-4 text-emerald-500" />
+                            <span>{camp.boost_multiplier.toFixed(1)}x</span>
+                          </p>
+                        )}
                       </div>
 
                       <div className="bg-white rounded-2xl p-3 border border-slate-200/40 text-center shadow-inner-sm col-span-1 sm:col-span-2">
@@ -476,6 +486,17 @@ export default function CampaignsAdminClient({
 
                   {/* Right Column: Approval/Decline buttons */}
                   <div className="flex items-center gap-3 w-full lg:w-auto shrink-0 border-t lg:border-t-0 pt-4 lg:pt-0">
+                    {camp.payment_proof_url && (
+                      <a
+                        href={camp.payment_proof_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-100 border border-slate-200 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-all cursor-pointer shadow-sm"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                        <span>View Receipt</span>
+                      </a>
+                    )}
                     {camp.status === "pending" ? (
                       <>
                         <button

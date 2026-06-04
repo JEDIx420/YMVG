@@ -11,14 +11,18 @@ const campaignSchema = z.object({
   boostMultiplier: z.number().min(1.0, "Boost multiplier must be at least 1.0x.").max(3.0, "Boost multiplier limit is 3.0x."),
   startDate: z.string().refine(val => !isNaN(Date.parse(val)), "Invalid start date."),
   endDate: z.string().refine(val => !isNaN(Date.parse(val)), "Invalid end date."),
+  paymentProofUrl: z.string().optional().nullable(),
 }).refine(data => {
   if (data.campaignType === "search_boost" && data.boostMultiplier < 1.1) {
     return false;
   }
+  if (data.campaignType === "homepage_patron" && !data.paymentProofUrl) {
+    return false;
+  }
   return true;
 }, {
-  message: "Search boost multiplier must be at least 1.1x.",
-  path: ["boostMultiplier"]
+  message: "Homepage Patron requests must provide a payment proof screenshot.",
+  path: ["paymentProofUrl"]
 });
 
 /**
@@ -31,6 +35,7 @@ export async function createAdCampaign(formData: {
   boostMultiplier: number;
   startDate: string;
   endDate: string;
+  paymentProofUrl?: string | null;
 }): Promise<{ success: boolean; id?: string; error?: string }> {
   return withAuthAction(async (supabase, user) => {
     try {
@@ -62,6 +67,7 @@ export async function createAdCampaign(formData: {
           boost_multiplier: validated.campaignType === "search_boost" ? validated.boostMultiplier : 1.0,
           start_date: new Date(validated.startDate).toISOString(),
           end_date: new Date(validated.endDate).toISOString(),
+          payment_proof_url: validated.paymentProofUrl || null,
         })
         .select("id")
         .single();

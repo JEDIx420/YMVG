@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createAdCampaign, pauseCampaign } from "@/app/actions/adCampaigns";
 import { Profile } from "@/types/database.types";
+import { createClient } from "@/utils/supabase/client";
 import {
   TrendingUp,
   Sparkles,
@@ -20,6 +21,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Percent,
+  Upload,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -123,6 +125,10 @@ export default function PromotionsClient({
 
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
+  // Patron Proof Upload States
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+
   const selectedBusiness = businesses.find((b) => b.id === selectedBusinessId);
   const hasLogoAndWebsite = !!(selectedBusiness?.logo_url && selectedBusiness?.website_url);
 
@@ -144,8 +150,52 @@ export default function PromotionsClient({
       return;
     }
 
+    if (campaignType === "homepage_patron" && !proofFile) {
+      setStatus({
+        type: "error",
+        message: "Please upload a payment proof screenshot to continue.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setStatus(null);
+
+    let proofUrl: string | null = null;
+
+    // Handle payment proof upload to storage bucket
+    if (campaignType === "homepage_patron" && proofFile) {
+      setUploadingProof(true);
+      try {
+        const supabaseClient = createClient();
+        const fileExt = proofFile.name.split(".").pop();
+        const filePath = `${profile.id}/proof-${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabaseClient.storage
+          .from("payment_proofs")
+          .upload(filePath, proofFile);
+
+        if (uploadError) {
+          throw new Error("Payment proof upload failed: " + uploadError.message);
+        }
+
+        const { data: { publicUrl } } = supabaseClient.storage
+          .from("payment_proofs")
+          .getPublicUrl(filePath);
+
+        proofUrl = publicUrl;
+      } catch (err: any) {
+        setStatus({
+          type: "error",
+          message: err.message || "An error occurred while uploading the payment proof.",
+        });
+        setUploadingProof(false);
+        setIsSubmitting(false);
+        return;
+      } finally {
+        setUploadingProof(false);
+      }
+    }
 
     try {
       const result = await createAdCampaign({
@@ -154,6 +204,7 @@ export default function PromotionsClient({
         boostMultiplier: campaignType === "search_boost" ? selectedBoost : 1.0,
         startDate,
         endDate,
+        paymentProofUrl: proofUrl,
       });
 
       if (!result.success) {
@@ -169,6 +220,7 @@ export default function PromotionsClient({
       // Reset form states
       setCampaignType("search_boost");
       setSelectedBoost(1.5);
+      setProofFile(null);
       setStartDate(new Date().toISOString().split("T")[0]);
       setEndDate(
         new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -476,13 +528,46 @@ export default function PromotionsClient({
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 flex gap-3 text-emerald-800">
-                        <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
-                        <div className="space-y-1">
-                          <h4 className="font-bold text-xs uppercase tracking-wider block">Ready for Placement</h4>
-                          <p className="text-[11px] font-light leading-relaxed">
-                            Listing has logo image and website URL configured. The logo will link to <a href={selectedBusiness.website_url || undefined} target="_blank" rel="noopener noreferrer" className="underline font-bold text-emerald-700">{selectedBusiness.website_url}</a> once activated.
+                      <div className="space-y-4">
+                        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 flex gap-3 text-emerald-800">
+                          <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
+                          <div className="space-y-1">
+                            <h4 className="font-bold text-xs uppercase tracking-wider block">Ready for Placement</h4>
+                            <p className="text-[11px] font-light leading-relaxed">
+                              Listing has logo image and website URL configured. The logo will link to <a href={selectedBusiness.website_url || undefined} target="_blank" rel="noopener noreferrer" className="underline font-bold text-emerald-700">{selectedBusiness.website_url}</a> once activated.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Payment Proof Screenshot Input */}
+                        <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-5 space-y-3">
+                          <label className="text-xs font-bold text-blue-950 uppercase tracking-wider block">
+                            Upload Payment Receipt (Screenshot)
+                          </label>
+                          <p className="text-[10px] text-slate-500 font-light leading-relaxed">
+                            Homepage Patron placements require administrative verification. Please transfer the payment to the SWIR official account and upload a screenshot of your transaction proof.
                           </p>
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                            <label className="cursor-pointer px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm">
+                              <Upload className="w-4 h-4 text-slate-400" />
+                              <span>{proofFile ? "Change Receipt" : "Upload Screenshot"}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    setProofFile(e.target.files[0]);
+                                  }
+                                }}
+                              />
+                            </label>
+                            {proofFile && (
+                              <span className="text-xs text-slate-600 font-medium truncate max-w-xs">
+                                Selected: {proofFile.name}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -527,13 +612,13 @@ export default function PromotionsClient({
                 {/* Action button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting || (campaignType === "homepage_patron" && !hasLogoAndWebsite)}
+                  disabled={isSubmitting || uploadingProof || (campaignType === "homepage_patron" && (!hasLogoAndWebsite || !proofFile))}
                   className="w-full py-3.5 bg-blue-950 hover:bg-black text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs active:scale-95 cursor-pointer mt-2"
                 >
-                  {isSubmitting ? (
+                  {isSubmitting || uploadingProof ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Creating Sponsorship Request...
+                      {uploadingProof ? "Uploading Proof Screenshot..." : "Creating Sponsorship Request..."}
                     </>
                   ) : (
                     <>
