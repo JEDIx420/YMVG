@@ -22,7 +22,7 @@ export async function getActivePatrons() {
           logo_url,
           website_url
         )
-      `)
+      `, { count: 'exact', head: false })
       .eq("campaign_type", "homepage_patron")
       .eq("status", "active");
 

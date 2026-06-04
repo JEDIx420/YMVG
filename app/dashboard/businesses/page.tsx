@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/app/actions/profiles";
 import { createClient } from "@/utils/supabase/server";
 import { Briefcase, Building2, MapPin, Shield, Calendar, ArrowRight, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import DeleteBusinessButton from "./DeleteBusinessButton";
 
 export const metadata = {
   title: "Business Audit - System Administration",
@@ -109,6 +110,9 @@ export default async function BusinessDirectoryPage() {
                             <span>Edit Listing</span>
                             <ArrowRight className="w-3 h-3" />
                           </Link>
+                          {profile?.app_role === "super_admin" && (
+                            <DeleteBusinessButton businessId={b.id} brandName={b.brand_name || "Unnamed Enterprise"} />
+                          )}
                         </div>
                       </td>
                     </tr>

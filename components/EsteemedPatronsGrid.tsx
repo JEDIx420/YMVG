@@ -19,7 +19,7 @@ export default async function EsteemedPatronsGrid() {
         logo_url,
         website_url
       )
-    `)
+    `, { count: "exact", head: false })
     .eq("campaign_type", "homepage_patron")
     .eq("status", "active");
 
@@ -53,7 +53,7 @@ export default async function EsteemedPatronsGrid() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-12">
         <div className="space-y-3">
           <span className="inline-flex items-center gap-2 px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full uppercase tracking-widest block w-fit mx-auto">
-            Esteemed Patrons
+            Our Well Wishers
           </span>
           <h2 className="text-3xl md:text-5xl font-black text-blue-950 tracking-tight mt-2">
             Our Homepage Patrons
