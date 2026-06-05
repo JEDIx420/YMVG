@@ -178,3 +178,32 @@ export async function pauseCampaign(campaignId: string): Promise<{ success: bool
     }
   }, { success: false, error: "Authentication failed." });
 }
+
+/**
+ * Deletes an advertising campaign from the database.
+ * Restricts operational access strictly to super_admin.
+ */
+export async function deleteCampaign(campaignId: string): Promise<{ success: boolean; error?: string }> {
+  return withAuthAction(async (supabase, user) => {
+    try {
+      const profile = await getCurrentProfile();
+      if (!profile || profile.app_role !== "super_admin") {
+        return { success: false, error: "Security Violation: Super Admin administrative access required." };
+      }
+
+      const { error } = await supabase
+        .from("ad_campaigns")
+        .delete()
+        .eq("id", campaignId);
+
+      if (error) throw error;
+
+      revalidatePath("/directory");
+      revalidatePath("/dashboard");
+      return { success: true };
+    } catch (err: any) {
+      console.error("deleteCampaign error:", err);
+      return { success: false, error: err.message || "Failed to delete campaign." };
+    }
+  }, { success: false, error: "Authentication failed." });
+}

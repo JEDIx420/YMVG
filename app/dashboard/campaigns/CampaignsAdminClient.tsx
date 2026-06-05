@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { approveCampaign, pauseCampaign } from "@/app/actions/adCampaigns";
+import { approveCampaign, pauseCampaign, deleteCampaign } from "@/app/actions/adCampaigns";
 import { Profile } from "@/types/database.types";
 import {
   ShieldAlert,
@@ -26,6 +26,7 @@ import {
   Loader2,
   Pause,
   Eye,
+  Trash2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -157,6 +158,42 @@ export default function CampaignsAdminClient({
       setStatusMessage({
         type: "error",
         text: err.message || "Failed to decline campaign.",
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleDeleteCampaign = async (id: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this boost campaign?")) {
+      return;
+    }
+    setActionLoadingId(id);
+    setStatusMessage(null);
+
+    try {
+      const res = await deleteCampaign(id);
+      if (!res.success) {
+        throw new Error(res.error || "Failed to delete campaign.");
+      }
+
+      setStatusMessage({
+        type: "success",
+        text: "Campaign deleted successfully.",
+      });
+
+      // Remove the campaign from local state
+      setCampaigns((prev) => prev.filter((c) => c.id !== id));
+
+      setTimeout(() => {
+        router.refresh();
+        setStatusMessage(null);
+      }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      setStatusMessage({
+        type: "error",
+        text: err.message || "Failed to delete campaign.",
       });
     } finally {
       setActionLoadingId(null);
@@ -521,22 +558,54 @@ export default function CampaignsAdminClient({
                         </button>
                       </>
                     ) : camp.status === "active" ? (
-                      <button
-                        onClick={() => handleDecline(camp.id)}
-                        disabled={actionLoadingId === camp.id}
-                        className="w-full lg:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 hover:border-red-200 hover:text-red-600 hover:bg-red-50/20 rounded-xl text-xs font-bold text-slate-600 transition-all cursor-pointer disabled:opacity-50"
-                      >
-                        {actionLoadingId === camp.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Pause className="w-3.5 h-3.5" />
+                      <div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:w-auto">
+                        <button
+                          onClick={() => handleDecline(camp.id)}
+                          disabled={actionLoadingId === camp.id}
+                          className="w-full lg:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 hover:border-red-200 hover:text-red-600 hover:bg-red-50/20 rounded-xl text-xs font-bold text-slate-600 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {actionLoadingId === camp.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Pause className="w-3.5 h-3.5" />
+                          )}
+                          <span>Pause Boost</span>
+                        </button>
+                        {profile?.app_role === "super_admin" && (
+                          <button
+                            onClick={() => handleDeleteCampaign(camp.id)}
+                            disabled={actionLoadingId === camp.id}
+                            className="w-full lg:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 hover:text-rose-600 rounded-xl text-xs font-bold text-rose-600 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {actionLoadingId === camp.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                            <span>Delete Boost</span>
+                          </button>
                         )}
-                        <span>Pause Boost</span>
-                      </button>
+                      </div>
                     ) : (
-                      <span className="text-xs text-slate-400 font-medium italic block w-full text-center lg:text-left">
-                        Archive Record
-                      </span>
+                      <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+                        <span className="text-xs text-slate-400 font-medium italic block text-center lg:text-left">
+                          Archive Record
+                        </span>
+                        {profile?.app_role === "super_admin" && (
+                          <button
+                            onClick={() => handleDeleteCampaign(camp.id)}
+                            disabled={actionLoadingId === camp.id}
+                            className="w-full lg:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 hover:text-rose-600 rounded-xl text-xs font-bold text-rose-600 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {actionLoadingId === camp.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                            <span>Delete Boost</span>
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
 
