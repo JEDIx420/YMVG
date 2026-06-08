@@ -10,17 +10,18 @@ import {
   TrendingUp, 
   ShieldCheck, 
   ArrowRight,
-  Activity,
   BarChart3,
   CheckCircle2
 } from "lucide-react";
-
-interface SystemActivity {
-  type: "ad" | "auth" | "business" | "member";
-  desc: string;
-  time: string;
-  status: string;
-}
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from "recharts";
 
 interface CategoryCount {
   category: string;
@@ -37,7 +38,7 @@ interface AdminViewProps {
   memberCount: number;
   businessCount: number;
   activeCampaignsCount: number;
-  recentActivities: SystemActivity[];
+  analyticsEvents: { event_type: "view" | "referral"; created_at: string }[];
   categoryStats: CategoryCount[];
   campaignStats: CampaignStatusCount[];
 }
@@ -47,23 +48,38 @@ export default function AdminView({
   memberCount, 
   businessCount, 
   activeCampaignsCount,
-  recentActivities,
+  analyticsEvents,
   categoryStats,
   campaignStats
 }: AdminViewProps) {
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "auth":
-        return <Users className="w-4 h-4 text-blue-600" />;
-      case "ad":
-        return <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />;
-      case "business":
-        return <Briefcase className="w-4 h-4 text-emerald-600" />;
-      default:
-        return <Activity className="w-4 h-4 text-slate-500" />;
+  const chartData = React.useMemo(() => {
+    const dayMap: { [key: string]: { date: string; views: number; referrals: number } } = {};
+    
+    // Populate last 30 days
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateString = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const dateKey = d.toISOString().split("T")[0];
+      dayMap[dateKey] = { date: dateString, views: 0, referrals: 0 };
     }
-  };
+    
+    // Accumulate events
+    analyticsEvents.forEach((e) => {
+      if (!e.created_at) return;
+      const dateKey = e.created_at.split("T")[0];
+      if (dayMap[dateKey]) {
+        if (e.event_type === "view") {
+          dayMap[dateKey].views += 1;
+        } else if (e.event_type === "referral") {
+          dayMap[dateKey].referrals += 1;
+        }
+      }
+    });
+
+    return Object.values(dayMap);
+  }, [analyticsEvents]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -160,42 +176,72 @@ export default function AdminView({
         </Link>
       </div>
 
-      {/* Recent Activities Log Panel (Full width) - LIVE DATA */}
+      {/* Platform Traffic Overview Graph (Full width) */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-6">
-        <h3 className="text-lg font-black text-blue-950 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 pb-3">
-          <TrendingUp className="w-4 h-4 text-red-600" />
-          <span>Real-time System Actions</span>
-        </h3>
-
-        <div className="space-y-4">
-          {recentActivities.length === 0 ? (
-            <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
-              <ShieldCheck className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-xs text-slate-500">No recent system activities found.</p>
+        <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-black text-blue-950 uppercase tracking-tight flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-red-600" />
+              <span>Platform Traffic Overview</span>
+            </h3>
+            <p className="text-xs text-slate-400 font-light mt-1">
+              Timeline of total search views and member referrals across all listed enterprises over the last 30 days.
+            </p>
+          </div>
+          
+          <div className="flex gap-4 text-xs font-bold text-slate-500 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-blue-900"></span>
+              <span>Views ({chartData.reduce((sum, d) => sum + d.views, 0)})</span>
             </div>
-          ) : (
-            recentActivities.map((log, idx) => (
-              <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-slate-200 hover:bg-slate-100/30 transition-all">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-8 h-8 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
-                    {getActivityIcon(log.type)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-700 truncate leading-relaxed">{log.desc}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{log.type}</span>
-                      <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                      <div className="flex items-center gap-1">
-                        <span className={`w-1.5 h-1.5 rounded-full ${getStatusColor(log.status)}`}></span>
-                        <span className="text-[9px] font-semibold text-slate-500 uppercase">{log.status}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <span className="text-xs text-slate-400 font-light shrink-0 ml-4">{log.time}</span>
-              </div>
-            ))
-          )}
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-red-600"></span>
+              <span>Referrals ({chartData.reduce((sum, d) => sum + d.referrals, 0)})</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full h-[320px] pt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#1e3a8a" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="#1e3a8a" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorReferrals" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#dc2626" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="#dc2626" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickLine={false} />
+              <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: "#1e293b", borderRadius: "16px", border: "none" }}
+                labelStyle={{ color: "#f8fafc", fontWeight: "bold", fontSize: "11px" }}
+                itemStyle={{ fontSize: "11px", padding: "2px 0" }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="views" 
+                stroke="#1e3a8a" 
+                strokeWidth={2}
+                fillOpacity={1} 
+                fill="url(#colorViews)" 
+                name="Page Views"
+              />
+              <Area 
+                type="monotone" 
+                dataKey="referrals" 
+                stroke="#dc2626" 
+                strokeWidth={2}
+                fillOpacity={1} 
+                fill="url(#colorReferrals)" 
+                name="Referral Clicks"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

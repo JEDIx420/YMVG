@@ -61,92 +61,28 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   switch (profile.app_role) {
     case "super_admin":
     case "region_admin": {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const [
         membersRes,
         businessesRes,
         campaignsRes,
-        recentCampaignsRes,
-        recentProfilesRes,
-        recentBusinessesRes,
+        analyticsEventsRes,
         allBusinessesRes,
         allCampaignsRes
       ] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("businesses").select("*", { count: "exact", head: true }),
         supabase.from("ad_campaigns").select("*", { count: "exact", head: true }).eq("status", "active"),
-        supabase.from("ad_campaigns").select("id, status, boost_multiplier, created_at, businesses(brand_name)").order("created_at", { ascending: false }).limit(5),
-        supabase.from("profiles").select("id, full_name, email, app_role, created_at").order("created_at", { ascending: false }).limit(5),
-        supabase.from("businesses").select("id, brand_name, category").limit(5),
+        supabase.from("analytics_events")
+          .select("event_type, created_at")
+          .gte("created_at", thirtyDaysAgo.toISOString()),
         supabase.from("businesses").select("category"),
         supabase.from("ad_campaigns").select("status")
       ]);
 
-      const activities: any[] = [];
-
-      // 1. Process recent profiles
-      if (recentProfilesRes.data) {
-        recentProfilesRes.data.forEach((p: any) => {
-          activities.push({
-            type: "auth",
-            desc: `New member registered: ${p.full_name || p.email}`,
-            time: p.created_at,
-            status: "success"
-          });
-        });
-      }
-
-      // 2. Process recent businesses
-      if (recentBusinessesRes.data) {
-        recentBusinessesRes.data.forEach((b: any) => {
-          activities.push({
-            type: "business",
-            desc: `New business listing: '${b.brand_name || 'Unnamed'}' under ${b.category || 'Professional'}`,
-            time: new Date().toISOString(), // Fallback since businesses table lacks created_at
-            status: "success"
-          });
-        });
-      }
-
-      // 3. Process recent campaigns
-      if (recentCampaignsRes.data) {
-        recentCampaignsRes.data.forEach((c: any) => {
-          const bizName = (c.businesses as any)?.brand_name || "Unnamed Listing";
-          activities.push({
-            type: "ad",
-            desc: `Campaign boost requested (${c.boost_multiplier}x) for '${bizName}'`,
-            time: c.created_at,
-            status: c.status
-          });
-        });
-      }
-
-      // Sort combined array by time descending
-      const sortedActivities = activities
-        .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-        .slice(0, 5)
-        .map((act) => {
-          // Format relative time
-          const diffMs = Date.now() - new Date(act.time).getTime();
-          const diffMins = Math.floor(diffMs / 60000);
-          const diffHrs = Math.floor(diffMins / 60);
-          const diffDays = Math.floor(diffHrs / 24);
-
-          let timeStr = "Just now";
-          if (diffDays > 0) {
-            timeStr = `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-          } else if (diffHrs > 0) {
-            timeStr = `${diffHrs} hr${diffHrs > 1 ? "s" : ""} ago`;
-          } else if (diffMins > 0) {
-            timeStr = `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
-          }
-
-          return {
-            type: act.type,
-            desc: act.desc,
-            time: timeStr,
-            status: act.status
-          };
-        });
+      const analyticsEvents = (analyticsEventsRes.data || []) as { event_type: "view" | "referral"; created_at: string }[];
 
       // Aggregate Category Stats
       const catCounts: { [key: string]: number } = {};
@@ -180,7 +116,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           memberCount={membersRes.count || 0}
           businessCount={businessesRes.count || 0}
           activeCampaignsCount={campaignsRes.count || 0}
-          recentActivities={sortedActivities}
+          analyticsEvents={analyticsEvents}
           categoryStats={categoryStats}
           campaignStats={campaignStats}
         />

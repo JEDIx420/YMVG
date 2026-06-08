@@ -10,7 +10,6 @@ import {
   Sparkles, 
   MapPin, 
   Mail, 
-  CreditCard, 
   User, 
   Share2, 
   Plus, 
@@ -75,7 +74,6 @@ export default function Sidebar({ profile }: SidebarProps) {
           { name: "Lead Center", href: "/dashboard/leads", icon: Mail },
           { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
           { name: "Boost Promos", href: "/dashboard/promotions", icon: Zap },
-          { name: "Billing", href: "/dashboard/billing", icon: CreditCard },
         ];
         break;
       case "member":
