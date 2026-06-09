@@ -13,13 +13,18 @@ const profileUpdateSchema = z.object({
 
 export type Profile = {
   id: string;
-  user_id: string;
+  user_id: string | null;
   full_name: string | null;
   email: string;
   phone: string | null;
   club: string | null;
   app_role: 'super_admin' | 'region_admin' | 'business_owner' | 'member';
   created_at: string;
+  imis_id?: string | null;
+  ym_region?: string | null;
+  ym_district?: string | null;
+  ym_zone?: string | null;
+  ym_club?: string | null;
 };
 
 /**

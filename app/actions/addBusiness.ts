@@ -35,6 +35,26 @@ export async function addBusiness(
 
     const newBusinessId = data.id;
 
+    // Perform role check and escalation
+    if (payload.owner_id) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('app_role')
+        .eq('user_id', payload.owner_id)
+        .single();
+
+      if (!profileError && profile && profile.app_role === 'member') {
+        const { error: updateRoleError } = await supabase
+          .from('profiles')
+          .update({ app_role: 'business_owner' })
+          .eq('user_id', payload.owner_id);
+
+        if (updateRoleError) {
+          console.error("Failed to upgrade profile app_role to business_owner:", updateRoleError);
+        }
+      }
+    }
+
     return { success: true, id: newBusinessId };
   } catch (err) {
     console.error("addBusiness pipeline failed:", err);

@@ -8,7 +8,7 @@ import * as z from "zod";
 import { createClient } from "@/utils/supabase/client";
 import { addBusiness } from "@/app/actions/addBusiness";
 import { updateBusiness } from "@/app/actions/updateBusiness";
-import { Business } from "@/types/database.types";
+import { Business, Profile } from "@/types/database.types";
 import { 
   Loader2, 
   Upload, 
@@ -57,7 +57,7 @@ type BusinessFormValues = z.infer<typeof onboardingSchema>;
 
 interface BusinessProfileFormProps {
   mode: 'create' | 'edit';
-  initialData?: Partial<Business> | null;
+  initialData?: Partial<Business> | Profile | null;
 }
 
 export default function BusinessProfileForm({ mode, initialData }: BusinessProfileFormProps) {
@@ -65,9 +65,9 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState<{ [key: string]: boolean }>({});
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [logoUrl, setLogoUrl] = useState(initialData?.logo_url || "");
-  const [brochureUrl, setBrochureUrl] = useState(initialData?.brochure_url || "");
-  const [primaryImageUrl, setPrimaryImageUrl] = useState(initialData?.primary_image_url || "");
+  const [logoUrl, setLogoUrl] = useState((initialData as any)?.logo_url || "");
+  const [brochureUrl, setBrochureUrl] = useState((initialData as any)?.brochure_url || "");
+  const [primaryImageUrl, setPrimaryImageUrl] = useState((initialData as any)?.primary_image_url || "");
 
   const supabase = createClient();
 
@@ -78,23 +78,23 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
   } = useForm<BusinessFormValues>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
-      brand_name: initialData?.brand_name || "",
-      category: initialData?.category || "",
-      tagline: initialData?.tagline || "",
-      description: initialData?.description || "",
-      contact_email: initialData?.contact_email || "",
-      contact_phone: initialData?.contact_phone || initialData?.owner_phone || "",
-      website_url: initialData?.website_url || "",
-      address: initialData?.address || "",
-      city: initialData?.city || "",
-      state: initialData?.state || "",
-      country: initialData?.country || (mode === 'create' ? "India" : ""),
-      ym_region: initialData?.ym_region || "",
-      ym_district: initialData?.ym_district || "",
-      ym_zone: initialData?.ym_zone || "",
-      ym_club: initialData?.ym_club || "",
-      services: initialData?.services ? initialData.services.join(', ') : "",
-      special_offer: initialData?.special_offer || "",
+      brand_name: (initialData as any)?.brand_name || "",
+      category: (initialData as any)?.category || "",
+      tagline: (initialData as any)?.tagline || "",
+      description: (initialData as any)?.description || "",
+      contact_email: (initialData as any)?.contact_email || (initialData as any)?.email || "",
+      contact_phone: (initialData as any)?.contact_phone || (initialData as any)?.owner_phone || (initialData as any)?.phone || "",
+      website_url: (initialData as any)?.website_url || "",
+      address: (initialData as any)?.address || "",
+      city: (initialData as any)?.city || "",
+      state: (initialData as any)?.state || "",
+      country: (initialData as any)?.country || (mode === 'create' ? "India" : ""),
+      ym_region: (initialData as any)?.ym_region || "",
+      ym_district: (initialData as any)?.ym_district || "",
+      ym_zone: (initialData as any)?.ym_zone || "",
+      ym_club: (initialData as any)?.ym_club || "",
+      services: (initialData as any)?.services ? (initialData as any).services.join(', ') : "",
+      special_offer: (initialData as any)?.special_offer || "",
     },
   });
 
@@ -182,11 +182,11 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
         logo_url: logoUrl || null,
         brochure_url: brochureUrl || null,
         primary_image_url: primaryImageUrl || null,
-        owner_phone: initialData?.owner_phone || null,
-        gallery_urls: initialData?.gallery_urls || null,
-        sponsorship_tier: initialData?.sponsorship_tier || null,
-        ym_designation: initialData?.ym_designation || null,
-        imis_id: initialData?.imis_id || null,
+        owner_phone: (initialData as any)?.owner_phone || null,
+        gallery_urls: (initialData as any)?.gallery_urls || null,
+        sponsorship_tier: (initialData as any)?.sponsorship_tier || null,
+        ym_designation: (initialData as any)?.ym_designation || null,
+        imis_id: (initialData as any)?.imis_id || null,
       };
 
       if (mode === 'create') {

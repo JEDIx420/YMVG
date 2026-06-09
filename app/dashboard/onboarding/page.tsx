@@ -10,14 +10,12 @@ export default async function OnboardingServerPage() {
     redirect('/login');
   }
 
-  // Fetch the most recently updated business to extract YMI details
-  const { data: recentBusinesses } = await supabase
-    .from('businesses')
-    .select('owner_phone, ym_club, ym_district, ym_zone, ym_region')
-    .eq('owner_id', user.id)
-    .limit(1);
+  // Fetch the logged-in user's profile record to extract personal and YMI club details
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email, phone, ym_region, ym_club, ym_district, ym_zone, full_name, imis_id')
+    .eq('user_id', user.id)
+    .single();
 
-  const recentBusiness = recentBusinesses?.[0] || null;
-
-  return <BusinessProfileForm mode="create" initialData={recentBusiness || undefined} />;
+  return <BusinessProfileForm mode="create" initialData={profile || null} />;
 }
