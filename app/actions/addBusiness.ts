@@ -2,12 +2,10 @@
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { getEmbedding } from "./getEmbedding";
 import { Business } from "@/types/database.types";
-import { generateBusinessVector } from "@/utils/ai/vector-generator";
 
 export async function addBusiness(
-  payload: Omit<Business, 'id' | 'embedding'>
+  payload: Omit<Business, 'id'>
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -23,7 +21,7 @@ export async function addBusiness(
   );
 
   try {
-    // 1. Insert into Database WITHOUT Embedding
+    // 1. Insert into Database
     const { data, error } = await supabase
       .from('businesses')
       .insert([payload])
@@ -36,26 +34,6 @@ export async function addBusiness(
     }
 
     const newBusinessId = data.id;
-
-    // 2. Generate and save AI Vector Embedding
-    console.log("Vectorizing new business entry...");
-    try {
-      const vector = await generateBusinessVector(payload);
-      if (vector) {
-        const { error: vectorError } = await supabase
-          .from('businesses')
-          .update({ embedding: vector })
-          .eq('id', newBusinessId);
-        
-        if (vectorError) {
-          console.error("Failed to save vector embedding:", vectorError);
-        }
-      } else {
-        console.warn("AI Vectorization returned null, business created without embedding.");
-      }
-    } catch (vectorError) {
-      console.error("Error generating/saving embedding:", vectorError);
-    }
 
     return { success: true, id: newBusinessId };
   } catch (err) {

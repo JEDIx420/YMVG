@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { generateBusinessVector } from "@/utils/ai/vector-generator";
 import { withAuthAction } from "@/utils/supabase/db-helper";
 
 export async function updateBusiness(businessId: string, formData: any) {
@@ -52,23 +51,6 @@ export async function updateBusiness(businessId: string, formData: any) {
   if (updateError) {
     console.error("Update error:", updateError);
     return { error: "Failed to update business profile. Please try again." };
-  }
-
-  // 4. Generate and save AI Vector Embedding
-  try {
-    const vector = await generateBusinessVector(formData);
-    if (vector) {
-      const { error: vectorError } = await supabase
-        .from("businesses")
-        .update({ embedding: vector })
-        .eq("id", businessId);
-      
-      if (vectorError) {
-        console.error("Failed to update vector embedding:", vectorError);
-      }
-    }
-  } catch (vectorError) {
-    console.error("Error during vector generation:", vectorError);
   }
 
     // 4. Invalidate cache for directory and spotlight pages

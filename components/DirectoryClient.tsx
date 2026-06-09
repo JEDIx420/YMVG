@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Business } from '@/types/database.types';
-import { getEmbedding } from '@/app/actions/getEmbedding';
 import { performHybridSearch, SearchResult, getUniqueCategories, getUniqueCities } from '@/app/actions/search';
-import { syncAllVectors } from '@/app/actions/sync';
 import { Search, SearchX, ArrowRight, Briefcase, Sparkles, Filter, XCircle, ChevronDown, CheckCircle2, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -46,7 +44,6 @@ export default function DirectoryClient({
   const [isSearching, setIsSearching] = useState(false);
   const [isWideSearch, setIsWideSearch] = useState(false);
   const [manualSearchPerformed, setManualSearchPerformed] = useState(false);
-  const [isSyncing, startSync] = React.useTransition();
 
   // Fetch unique categories & cities from database on mount
   React.useEffect(() => {
@@ -132,28 +129,12 @@ export default function DirectoryClient({
       };
     }
 
-    // 3. Semantic Match (Vector similarity)
+    // 3. Search Match (FTS match)
     return { 
-      text: "Semantic vector match", 
+      text: "Search match", 
       icon: <Sparkles className="w-3 h-3 text-purple-500" />,
-      type: 'semantic'
+      type: 'search'
     };
-  };
-
-  const handleAdminSync = () => {
-    startSync(async () => {
-      try {
-        const res = await syncAllVectors();
-        if (res.success) {
-          alert(`Successfully synced ${res.count || 0} business vectors.`);
-          router.refresh();
-        } else {
-          alert(`Error: ${res.message}`);
-        }
-      } catch (err) {
-        alert("A fatal error occurred during sync.");
-      }
-    });
   };
 
   return (
@@ -373,6 +354,11 @@ export default function DirectoryClient({
                                 <span className="px-3 py-1 bg-blue-50 text-blue-800 text-xs font-bold rounded-lg border border-blue-100 uppercase">
                                   {business.category}
                                 </span>
+                                {'is_boosted' in business && business.is_boosted && (
+                                  <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-md border border-amber-200 uppercase flex items-center gap-1">
+                                    <Zap className="w-2.5 h-2.5 fill-amber-500 text-amber-500" /> Boosted
+                                  </span>
+                                )}
                               </div>
                             )}
                         </div>
@@ -426,15 +412,6 @@ export default function DirectoryClient({
           </AnimatePresence>
         </div>
 
-        <div className="mt-20 text-center border-t border-slate-100 pt-10">
-          <button
-            onClick={handleAdminSync}
-            disabled={isSyncing}
-            className={`text-[10px] font-bold text-slate-300 transition-colors uppercase tracking-[0.2em] ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'hover:text-blue-600'}`}
-          >
-            {isSyncing ? 'SYNCING VECTORS...' : 'NEXUS Admin: Sync Vectors'}
-          </button>
-        </div>
       </section>
     </div>
   );

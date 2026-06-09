@@ -24,7 +24,6 @@ export interface Business {
   ym_club: string | null;
   ym_designation: string | null;
   imis_id: string | null;
-  embedding: number[] | null;
   brochure_url?: string | null;
   owner_email?: string | null;
   city?: string | null;

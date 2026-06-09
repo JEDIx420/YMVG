@@ -2,11 +2,11 @@
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { getEmbedding } from "./getEmbedding";
 import { Business } from "@/types/database.types";
 
 export type SearchResult = Business & {
-  final_score: number;
+  search_score: number;
+  is_boosted: boolean;
 };
 
 export async function performHybridSearch(
@@ -32,7 +32,7 @@ export async function performHybridSearch(
 
     // Stage 1: Empty Query Bypass (Category/Location-only browsing)
     if (!trimmedQuery) {
-      let query = supabase.from('businesses').select('id, owner_id, brand_name, category, description, services, special_offer, address, city, tagline, website_url, logo_url, primary_image_url, gallery_urls, sponsorship_tier, ym_region, ym_club, ym_designation');
+      let query = supabase.from('businesses').select('*');
       
       if (category && category !== 'All') {
         query = query.eq('category', category);
@@ -52,23 +52,12 @@ export async function performHybridSearch(
       // Map to SearchResult with 100% match score
       return (data as Business[]).map(b => ({
         ...b,
-        final_score: 1.0
+        search_score: 1.0,
+        is_boosted: false
       }));
     }
 
-    let queryEmbedding: number[] | null = null;
-    try {
-      queryEmbedding = await getEmbedding(trimmedQuery);
-    } catch (err) {
-      console.error("Error during embedding generation:", err);
-    }
-
-    if (!queryEmbedding) {
-      console.warn("Semantic search unavailable, falling back to FTS");
-    }
-
-    const { data, error } = await supabase.rpc('hybrid_search_businesses', {
-      query_embedding: queryEmbedding || null,
+    const { data, error } = await supabase.rpc('keyword_search_businesses', {
       query_text: trimmedQuery,
       category_filter: category === 'All' ? null : category,
       location_filter: location === 'All' ? null : location,
@@ -76,7 +65,7 @@ export async function performHybridSearch(
     });
 
     if (error) {
-      console.error("Hybrid Search Error:", error);
+      console.error("Keyword Search Error:", error);
       return [];
     }
 
@@ -85,16 +74,16 @@ export async function performHybridSearch(
     }
 
     // Dynamic Relational Drop-off Filter
-    const topScore = data[0].final_score;
+    const topScore = data[0].search_score;
     const DROPOFF_THRESHOLD = 0.50;
     const minimumAcceptableScore = topScore * DROPOFF_THRESHOLD;
     
-    const filteredResults = data.filter((business: any) => business.final_score >= minimumAcceptableScore);
+    const filteredResults = data.filter((business: any) => business.search_score >= minimumAcceptableScore);
 
-    // Stage 3: Score Normalization (RRF max is 1/61, so multiply by 61 for UI %)
     return (filteredResults as SearchResult[]).map(b => ({
       ...b,
-      final_score: Math.min(b.final_score * 61, 1.0)
+      search_score: b.search_score,
+      is_boosted: b.is_boosted
     }));
   } catch (err) {
     console.error("performHybridSearch failed:", err);
