@@ -97,6 +97,13 @@ export default function Navbar({ user }: NavbarProps) {
                   </div>
                 </div>
               </div>
+
+              <Link 
+                href="/downloads" 
+                className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors py-4"
+              >
+                Downloads
+              </Link>
             </div>
           </div>
 
