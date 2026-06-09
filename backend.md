@@ -88,6 +88,7 @@ Updated in Phase 8 to support both Search Boosts and Homepage Banner Patrons.
 | `boost_multiplier`| `float` | NO | Sorting boost power (defaults to `1.0`). |
 | `start_date` | `timestamptz` | NO | Schedule start timestamp. |
 | `end_date` | `timestamptz` | NO | Schedule expiration timestamp. |
+| `payment_proof_url` | `text` | YES | Supabase Storage public URL for the payment proof screenshot. |
 | `created_at` | `timestamptz` | NO | Record creation timestamp. |
 
 ---
@@ -115,6 +116,19 @@ Updated in Phase 8 to support both Search Boosts and Homepage Banner Patrons.
       )
     );
     ```
+
+### `ad_campaigns` RLS
+*   **Select Campaigns (Admins & Owners)**: Allows regional/super admins or the business owner associated with the campaign's business to SELECT campaign details.
+*   **Select Campaigns (Public Patrons)**: Allows public anonymous and authenticated users to view active homepage patron campaigns:
+    ```sql
+    CREATE POLICY select_public_patron_ad_campaigns ON public.ad_campaigns 
+        FOR SELECT 
+        TO anon, authenticated
+        USING (status = 'active' AND campaign_type = 'homepage_patron');
+    ```
+*   **Insert Campaigns (Owners Only)**: Allows listing owners to create ad campaigns for businesses they own (matching `owner_id = auth.uid()`).
+*   **Update Campaigns (Admins & Owners in Draft)**: Admins can update any campaign status (to approve, pause, or expire them). Business owners can only modify campaigns while they are in the `'draft'` status.
+
 
 ---
 

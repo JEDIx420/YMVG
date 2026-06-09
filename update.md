@@ -358,7 +358,7 @@ app/dashboard/
 2. Performs a server-side join query: `supabase.from('profiles').select('app_role').single()`.
 3. Renders a unified, glassmorphic panel sidebar. The sidebar options are dynamic:
    * **Super Admin / Region Admin**: Analytics, User Audit, Regions Directory, Business Directory, Ad Campaigns.
-   * **Business Owner**: My Business, Lead Center, Analytics, Boost Promos, Billing.
+   * **Business Owner**: My Business, Lead Center, Analytics, Boost Promos.
    * **Member**: My Profile, Referral Hub, Register Business.
 
 ### 6.2 View Specifications
@@ -480,7 +480,7 @@ Super Admins and Region Admins who also own businesses needed a way to switch be
 #### A. Sidebar Refactoring (`components/dashboard/Sidebar.tsx`)
 *   **Removed** the "Main Website" and "Public Directory" navigation links from the sidebar to keep the dashboard focused.
 *   **Implemented `useSearchParams` hook** to detect the `?view=owner` query parameter in the URL.
-*   **Dynamic navigation override**: When a `super_admin` or `region_admin` accesses any dashboard route with `?view=owner`, the sidebar automatically renders the `business_owner` navigation array (My Business, Lead Center, Analytics, Boost Promos, Billing) instead of the standard admin links.
+*   **Dynamic navigation override**: When a `super_admin` or `region_admin` accesses any dashboard route with `?view=owner`, the sidebar automatically renders the `business_owner` navigation array (My Business, Lead Center, Analytics, Boost Promos) instead of the standard admin links.
 *   **Link propagation**: All sidebar `<Link>` components in impersonated view append `?view=owner` to their `href` to persist the view state across page navigation.
 *   **Role badge override**: The user identity card at the bottom of the sidebar displays `"business owner (impersonated)"` when in owner view mode.
 
@@ -577,3 +577,26 @@ The main dashboard server component was refactored to supply rich data to AdminV
 | `app/dashboard/users/page.tsx` | **NEW** | Server component with role gate and concurrent profiles/businesses fetch |
 | `app/dashboard/users/UserAuditClient.tsx` | **NEW** | CRM audit table with search, detail drawer, and business cross-reference |
 | `package.json` | **MODIFIED** | Added `recharts` dependency |
+
+---
+
+## 10. Phase 8: Partner Tooling & Monetization Ecosystem
+* **Overview**: Implemented advanced analytics, lead generation CRM capabilities, monetization options (Search Boosts vs. Homepage Patrons), payment proof upload integrations, and a dynamic public sponsor display loop.
+* **Leads Database Table (`public.leads`)**: Created the CRM logs table mapping `id`, `business_id` (foreign key to `businesses`), `sender_name`, `sender_email`, `sender_phone`, `message`, and `created_at` timestamp. Added performance index `idx_leads_business` and applied RLS policies ensuring only authenticated owners of the business (or super/region admins) can SELECT leads.
+* **Lead Submission Server Action (`sendLead.ts`)**: Designed a robust handler that writes incoming inquiry details directly to the `leads` table *before* executing the Resend email dispatch. If database logging fails, the process aborts to prevent phantom emails. Injects an automatic BCC audit link to `jayanand.jayakumar@gmail.com`.
+* **Lead Center Dashboard Inbox (`app/dashboard/leads`)**: Created a Next.js server page routing to a split-pane CRM inbox. Allows business owners to browse message threads, check sender contact info, and track customer inquiry payloads locally.
+* **Search Boosts & Homepage Patrons (`public.ad_campaigns` alterations)**: Extended campaigns schema to support `campaign_type` (restricted via check constraint to `'search_boost'` or `'homepage_patron'`). Business owners can upload screenshots of payment transfers to the `payment_proofs` storage bucket via the promotions client, registering campaign submissions with status `'pending'` and the public proof image URL written to `payment_proof_url`.
+* **Public Esteemed Patrons Grid (`<EsteemedPatronsGrid />`)**: Rendered an animated grid of active homepage patrons on the root landing page (`/`). Fetches campaign details using the cached-busted/revalidated database check `getActivePatrons` server action to guarantee real-time visibility for unauthenticated public visitors.
+* **Branded Auth Error Boundary Page (`app/auth/auth-error/page.tsx`)**: Resolved Next.js 404 issue on Supabase auth callbacks by constructing a premium SWIR-themed authentication failure page. Captures URL search parameters (`error`, `error_description`) to display friendly error messages, specific database trigger errors, Google email mismatch instructions, and a return/retry action panel.
+
+---
+
+## 11. Phase 9: Dashboard Streamlining & Layout Cleanups (Current State)
+* **Overview**: Consolidated dashboard interfaces to eliminate obsolete options, reduce database query loads, and replace low-value text feeds with high-level visual analytics.
+* **Super Admin Dashboard Refactor**:
+  * **Removed Activity Feed**: Deleted the "Real-Time System Actions" event feed and removed the associated parsing code (merging recent profiles, recent campaigns, and recent businesses).
+  * **Optimized Database Fetching**: Refactored the `Promise.all` inside `app/dashboard/page.tsx`'s admin switch. Removed calls fetching `recentProfiles`, `recentCampaigns`, and `recentBusinesses`, resulting in a significantly faster initial page load.
+  * **Interactive Platform Area Chart**: Modified `app/dashboard/page.tsx` to fetch the last 30 days of analytics events. Redesigned [AdminView.tsx](file:///Users/vincyvincent/ymbd/app/dashboard/components/AdminView.tsx) to parse views and referrals through a `useMemo` block, displaying them in a premium `recharts` responsive Area Chart using linear gradients (deep blue `#1e3a8a` for Page Views and crimson red `#dc2626` for Referral Clicks).
+* **Business Owner Sidebar Cleanup**:
+  * **Removed Billing Links**: Modified [Sidebar.tsx](file:///Users/vincyvincent/ymbd/components/dashboard/Sidebar.tsx) to remove the standalone "Billing" navigation menu item from the `business_owner` nav list.
+  * **Cleaned dead routes**: Deleted the obsolete route directory `app/dashboard/billing` entirely, ensuring no dead route URLs remain in the codebase.

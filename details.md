@@ -95,6 +95,7 @@ Created in Phase 1 and updated in Phase 8 to support both Search Boosts and Home
 | `boost_multiplier`| `float` | Sorting boost factor (defaults to `1.0`; minimum `1.1` for search boosts). |
 | `start_date` | `timestamp with time zone` | Start date of active promotion. |
 | `end_date` | `timestamp with time zone` | Expiration date of promotion. |
+| `payment_proof_url` | `text` | Supabase Storage public URL for the payment proof screenshot. |
 | `created_at` | `timestamp with time zone` | Record creation timestamp. |
 
 ---
@@ -126,7 +127,7 @@ To protect member privacy, RLS policies are strictly enforced across tables:
     ```
 
 ### `ad_campaigns` Table RLS
-*   **Select Campaigns**: Admins and the listing owner can read campaign information.
+*   **Select Campaigns**: Admins and the listing owner can read campaign details. Public anonymous visitors and authenticated users can SELECT active campaigns of type `homepage_patron`.
 *   **Insert Campaigns**: Listing owners can create campaign drafts.
 *   **Update Campaigns**: Admins can update any campaign status. Listing owners can only update campaigns if they are in `'draft'` status.
 
