@@ -1,13 +1,13 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 /**
  * Fetches all active homepage_patron campaigns with their associated business brand_name, logo_url, and website_url.
  */
 export async function getActivePatrons() {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("ad_campaigns")
       .select(`

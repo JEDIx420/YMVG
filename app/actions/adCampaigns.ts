@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { withAuthAction } from "@/utils/supabase/db-helper";
 import { getCurrentProfile } from "./profiles";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 const campaignSchema = z.object({
   businessId: z.string().uuid("Invalid Business ID format."),
@@ -191,7 +192,8 @@ export async function deleteCampaign(campaignId: string): Promise<{ success: boo
         return { success: false, error: "Security Violation: Super Admin administrative access required." };
       }
 
-      const { error } = await supabase
+      const adminSupabase = createAdminClient();
+      const { error } = await adminSupabase
         .from("ad_campaigns")
         .delete()
         .eq("id", campaignId);

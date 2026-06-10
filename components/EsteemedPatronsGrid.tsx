@@ -1,8 +1,8 @@
-import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { Building2 } from "lucide-react";
 
 export default async function EsteemedPatronsGrid() {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   
   // Only fetch records where campaign_type = 'homepage_patron' AND status = 'active'
   const { data, error } = await supabase
