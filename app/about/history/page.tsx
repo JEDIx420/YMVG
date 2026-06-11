@@ -266,9 +266,14 @@ export default function HistoryPage() {
             Our history is still being written. We invite you to join the South West India Region and add your chapter to our century-long story.
           </p>
           <div className="pt-8">
-            <button className="px-12 py-5 bg-white text-blue-950 rounded-full font-black text-lg transition-all hover:bg-red-600 hover:text-white shadow-2xl">
+            <a 
+              href="https://www.ysmen.org/join-us/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-12 py-5 bg-white text-blue-950 rounded-full font-black text-lg transition-all hover:bg-red-600 hover:text-white shadow-2xl"
+            >
               Join the Movement
-            </button>
+            </a>
           </div>
         </motion.div>
       </section>

@@ -199,13 +199,14 @@ export default function LoginPage() {
                   )}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => { setError(null); setMessage(''); setView("enroll"); }}
-                  className="w-full py-3.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl font-bold transition-all shadow-sm active:scale-95 flex justify-center items-center gap-2"
+                <a
+                  href="https://www.ysmen.org/join-us/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl font-bold transition-all shadow-sm active:scale-95 flex justify-center items-center gap-2 text-center"
                 >
                   Enroll as a Y's Men
-                </button>
+                </a>
               </div>
             </motion.div>
           )}
