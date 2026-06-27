@@ -49,7 +49,9 @@ export default function Navbar({ user }: NavbarProps) {
         { name: "Regional Leadership", href: "/region/leadership" },
         { name: "Regional Calendar", href: "/region/calendar" }
       ]
-    }
+    },
+    { name: "Blog", href: "/blog" },
+    { name: "Contact", href: "/contact" }
   ];
 
   return (
@@ -75,9 +77,9 @@ export default function Navbar({ user }: NavbarProps) {
                   priority
                 />
               </div>
-              <div className="flex flex-col leading-none">
-                <span className="text-lg md:text-xl font-black tracking-tighter text-blue-950">Y's Men</span>
-                <span className="text-[10px] md:text-xs font-bold text-red-600 tracking-widest uppercase">SWIR</span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-sm md:text-base font-black tracking-tight text-blue-950 uppercase">Y's Men</span>
+                <span className="text-xs md:text-sm font-black text-red-600 tracking-[0.18em] uppercase">SWIR</span>
               </div>
             </Link>
 
@@ -135,6 +137,18 @@ export default function Navbar({ user }: NavbarProps) {
                 className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors py-4"
               >
                 Downloads
+              </Link>
+              <Link 
+                href="/blog" 
+                className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors py-4"
+              >
+                Blog
+              </Link>
+              <Link 
+                href="/contact" 
+                className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors py-4"
+              >
+                Contact
               </Link>
             </div>
           </div>
