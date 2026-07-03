@@ -1,6 +1,8 @@
-# YMI Auth & Session Management Analysis
+# YMI Auth & Session Management Specification
 
-This document outlines the current state of Authentication and Authorization for the YMI South West India Region (SWIR) Business Directory.
+This document outlines the Authentication, Authorization, and Session Management processes for the YMI South West India Region (SWIR) Business Directory.
+
+---
 
 ## 1. The Login Flow
 
@@ -10,23 +12,21 @@ The authentication process relies on **Supabase Auth** using **Google OAuth**.
 Located in `components/AuthButton.tsx`, the `handleSignIn` function triggers the provider redirect:
 
 ```typescript
-// components/AuthButton.tsx
 const handleSignIn = async () => {
-    setLoading(true)
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${location.origin}/auth/callback`,
-      },
-    })
+  setLoading(true)
+  await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${location.origin}/auth/callback`,
+    },
+  })
 }
 ```
 
 ### Callback Handler
-The callback is processed in `app/auth/callback/route.ts`, which exchanges the temporary code for a persistent session and redirects back to the root:
+The callback is processed in `app/auth/callback/route.ts`, which exchanges the temporary code for a persistent session and redirects back to the dashboard or origin:
 
 ```typescript
-// app/auth/callback/route.ts
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -35,11 +35,11 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}/`)
+      return NextResponse.redirect(`${origin}/dashboard`)
     }
   }
 
-  return NextResponse.json({ error: "Failed to exchange callback code" }, { status: 500 })
+  return NextResponse.redirect(`${origin}/auth/auth-error?error=ExchangeFailed`)
 }
 ```
 
@@ -48,10 +48,9 @@ export async function GET(request: Request) {
 ## 2. Session Management & Middleware
 
 ### Middleware Protection
-We utilize Next.js Middleware in `middleware.ts` (using `@supabase/ssr`) to handle session refreshing via cookies.
+We utilize Next.js Middleware in `middleware.ts` (using `@supabase/ssr`) to handle session refreshing via cookies and enforce route security.
 
 ```typescript
-// middleware.ts
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -77,50 +76,34 @@ export async function middleware(request: NextRequest) {
 }
 ```
 
-### Session Validation on Protected Pages
-The `/dashboard` page validates the session server-side using the `createClient` utility from `utils/supabase/server.ts`.
+### Session & Role Validation
+Protected dashboard pages validate both the session and the user's role server-side using the `getCurrentProfile()` action:
 
 ```typescript
-// app/dashboard/page.tsx
-export default async function DashboardPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/"); // Standard redirect for unauthenticated users
-  }
-  
-  // Business logic follow...
+const profile = await getCurrentProfile();
+if (!profile) {
+  redirect("/");
 }
 ```
 
 ---
 
-## 3. Database Structure
+## 3. Database Structure & Roles
 
-### Users & Profiles
-There is currently **no dedicated profiles table** in the public schema. User metadata is accessed directly via `supabase.auth.getUser()`.
+### The `profiles` Table
+Every authenticated user has a corresponding record in the `public.profiles` table. This record is automatically created via a Supabase database trigger when a user completes their first Google OAuth sign-in.
 
-### Businesses Table
-The `businesses` table handles the "ownership" link. Key columns for identity matching:
+### Role Escalation Flow
+Users are assigned roles that control their interface capabilities:
 
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `owner_id` | `uuid` | Foreign key to `auth.users` ID (set after matching). |
-| `contact_email` | `text` | The email used to match pre-populated records with authenticated users. |
-| `brand_name` | `text` | The primary business name. |
+1.  **`member`**: The default role assigned to new sign-ups. Members can participate in referrals and manage their basic user profile.
+2.  **`business_owner`**: Escalated automatically when a member registers a business listing or claims an administrative pre-populated listing. This role gives them access to listing tools and the Lead CRM.
+3.  **`region_admin` / `super_admin`**: Administrative roles managing directory listings, user permissions, and campaign sponsorships.
 
 ---
 
 ## 4. Routing Structure
 
-- **Login Trigger**: Embedded in `components/AuthButton.tsx` (rendered in the Header).
-- **Dashboard**: `/dashboard` (Protected).
-- **Unauthorized/Fallbacks**: Unauthenticated access to `/dashboard` redirects to `/`.
-- **Match Errors**: Users who authenticate but have no matching business in the database are shown a "No Business Registered" view within `/dashboard`.
-
----
-
-## Next Steps for Whitelist Implementation
-1. Decide if the whitelist will be email-based (stored in a `whitelist` table) or boolean flagged in a `profiles` table.
-2. Update `middleware.ts` or `app/dashboard/page.tsx` to check against the whitelist after `supabase.auth.getUser()`.
+- **Login Trigger**: Rendered within the header via the `<AuthButton />` component.
+- **Protected Area**: `/dashboard` enforces authentication and routes users to role-specific layouts (`MemberView`, `BusinessOwnerView`, or `AdminView`).
+- **Authorization Errors**: Users experiencing callback issues are automatically routed to `/auth/auth-error` with descriptive error details.

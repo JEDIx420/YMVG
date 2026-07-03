@@ -37,13 +37,28 @@ graph TD
 
 ## 2. Core Database Schema & Data Models
 
+### The `profiles` Table
+Normalized user accounts automatically synchronized with Supabase Auth.
+
+| Column Name | PostgreSQL Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Unique identifier for the profile. |
+| `user_id` | `uuid` (FK, Unique) | Links to the `auth.users` table in the Supabase auth schema. |
+| `full_name` | `text` | Full name of the user. |
+| `email` | `text` (Unique) | User email address. |
+| `phone` | `text` | Contact phone number. |
+| `club` | `text` | Y's Men Club affiliation. |
+| `app_role` | `app_role` | Enum: `super_admin`, `region_admin`, `business_owner`, `member`. |
+| `created_at` | `timestamptz` | Date of profile creation. |
+
 ### The `businesses` Table
-The primary domain model is the `businesses` table. It holds all record details, verification fields, region parameters, and vector embeddings.
+The primary domain model is the `businesses` table. It holds all record details, verification fields, region parameters, and vector embeddings. Under the 1-to-Many architecture, multiple businesses can reference the same owner profile.
 
 | Column Name | PostgreSQL Type | Description |
 | :--- | :--- | :--- |
 | `id` | `uuid` (PK) | Unique identifier for each business profile. |
 | `owner_id` | `uuid` (FK) | Links to the `auth.users` table in the Supabase auth schema. |
+| `owner_profile_id` | `uuid` (FK) | Links to the `public.profiles` table. |
 | `owner_name` | `text` | The full name of the business owner. |
 | `owner_email` | `text` | Private email for claiming matching (protected by RLS). |
 | `contact_email` | `text` | Public contact email for business lead inquiries. |
@@ -103,6 +118,10 @@ Created in Phase 1 and updated in Phase 8 to support both Search Boosts and Home
 ## 3. Row-Level Security (RLS) Rules
 
 To protect member privacy, RLS policies are strictly enforced across tables:
+
+### `profiles` Table RLS
+*   **Select Profiles**: Users can only query their own profiles unless they are database admins, `super_admin`, or `region_admin`, who can view all profiles.
+*   **Update Profiles**: Users can only update their own profiles (`auth.uid() = user_id`).
 
 ### `businesses` Table RLS
 *   **Anonymous Select**: Allowed only for public columns (`brand_name`, `category`, `description`, `services`, `special_offer`, `logo_url`, `primary_image_url`, `ym_club`). Public users *cannot* access owner PII columns.
@@ -297,6 +316,7 @@ We utilize Next.js's dynamic sitemap builder which outputs a standard XML sitema
 
 *   **`addBusiness.ts`**: Safely creates a business profile row, captures the generated database ID, triggers the AI vector generator, and updates the embedding.
 *   **`updateBusiness.ts`**: Verifies authenticated session ownership of `businessId`, mutates active listing details, regenerates embeddings, and invalidates page caches.
+*   **`deleteBusiness.ts`**: Verifies authenticated session ownership and securely deletes the business listing.
 *   **`adCampaigns.ts`**: Handles creation, approval, and pausing of ad campaigns. Accepts `campaignType` parameter and maps it to the database table.
 *   **`campaigns.ts`**: Houses public fetches like `getActivePatrons` to hydrate homepage grids.
 *   **`search.ts`**: Entry point for directory queries. Triggers empty query category loads or coordinates NIM query embedding and `hybrid_search_businesses` database RPC execution.
@@ -305,3 +325,5 @@ We utilize Next.js's dynamic sitemap builder which outputs a standard XML sitema
 *   **`sync.ts`**: Administrative service-role synchronized utility for sweeping and embedding null vector rows.
 *   **`sendLead.ts`**: Transactional contact mailer that stores customer data in `leads` table before rendering HTML templates and dispatching via Resend.
 *   **`accessRequest.ts`**: Non-member admin enrollment dispatch pipeline.
+*   **`profiles.ts`**: Manages user profile retrieval, updating basic settings, and elevations from `member` to `business_owner`.
+*   **`logAnalyticsEvent.ts`**: Registers user views or member referrals asynchronously.

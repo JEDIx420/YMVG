@@ -28,13 +28,28 @@ graph TD
 
 ## 2. Core Database Schema & Data Models
 
+### The `profiles` Table
+Normalized user accounts automatically synchronized with Supabase Auth.
+
+| Column Name | PostgreSQL Type | Nullable | Description / Constraints |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` (PK) | NO | Unique identifier for the profile. |
+| `user_id` | `uuid` (FK) | NO | Links to `auth.users(id)` with cascade deletes (Unique). |
+| `full_name` | `text` | YES | Full name of the user. |
+| `email` | `text` | NO | User email address (Unique). |
+| `phone` | `text` | YES | Contact phone number. |
+| `club` | `text` | YES | Y's Men Club affiliation. |
+| `app_role` | `app_role` | NO | Enum: `super_admin`, `region_admin`, `business_owner`, `member`. |
+| `created_at` | `timestamptz` | NO | Profile creation timestamp (UTC). |
+
 ### The `businesses` Table
-The central data model representing a member's business listing. Stored in the public schema of PostgreSQL.
+The central data model representing a member's business listing. Stored in the public schema of PostgreSQL. Multiple businesses can be linked to the same owner's profile.
 
 | Column Name | PostgreSQL Type | Nullable | Description / Constraints |
 | :--- | :--- | :--- | :--- |
 | `id` | `uuid` (PK) | NO | Auto-generated UUID. |
 | `owner_id` | `uuid` (FK) | YES | Links to `auth.users` in Supabase Auth schema. |
+| `owner_profile_id` | `uuid` (FK) | YES | Links to `public.profiles(id)` on delete set null. |
 | `owner_name` | `text` | YES | Full name of the business owner. |
 | `owner_email` | `text` | YES | Private email address (protected by RLS, used for claiming stubs). |
 | `contact_email` | `text` | YES | Public email address displayed on directory listings. |
@@ -94,6 +109,10 @@ Updated in Phase 8 to support both Search Boosts and Homepage Banner Patrons.
 ---
 
 ## 3. Row-Level Security (RLS) Policies
+
+### `profiles` RLS
+*   **Select Profiles**: Users can only query their own profiles unless they are database admins, `super_admin`, or `region_admin`, who can view all profiles.
+*   **Update Profiles**: Users can only update their own profiles (`auth.uid() = user_id`).
 
 ### `businesses` RLS
 *   **Anonymous Select (Public)**: Public clients can only access non-PII columns.
@@ -215,6 +234,7 @@ The transaction pipeline uses **Resend API** to process customer leads and onboa
 
 *   **`addBusiness.ts`**: Safely creates a business profile row, captures the generated database ID, triggers the AI vector generator, and updates the embedding.
 *   **`updateBusiness.ts`**: Verifies authenticated session ownership of `businessId`, mutates active listing details, regenerates embeddings, and invalidates page caches.
+*   **`deleteBusiness.ts`**: Verifies authenticated session ownership and securely deletes the business listing.
 *   **`adCampaigns.ts`**: Handles creation, approval, and pausing of ad campaigns. Accepts `campaignType` parameter and maps it to the database table.
 *   **`campaigns.ts`**: Houses public fetches like `getActivePatrons` to hydrate homepage grids.
 *   **`search.ts`**: Entry point for directory queries. Triggers empty query category loads or coordinates NIM query embedding and `hybrid_search_businesses` database RPC execution.
@@ -223,3 +243,5 @@ The transaction pipeline uses **Resend API** to process customer leads and onboa
 *   **`sync.ts`**: Administrative service-role synchronized utility for sweeping and embedding null vector rows.
 *   **`sendLead.ts`**: Transactional contact mailer that stores customer data in `leads` table before rendering HTML templates and dispatching via Resend.
 *   **`accessRequest.ts`**: Non-member admin enrollment dispatch pipeline.
+*   **`profiles.ts`**: Manages user profile retrieval, updating basic settings, and elevations from `member` to `business_owner`.
+*   **`logAnalyticsEvent.ts`**: Registers user views or member referrals asynchronously.
