@@ -121,3 +121,63 @@ export async function upgradeProfileToBusinessOwner(): Promise<{ success: boolea
     return { success: true };
   }, { success: false, error: "Authentication failed." });
 }
+
+const personalProfileUpdateSchema = z.object({
+  full_name: z.string().min(2, "Full name must be at least 2 characters."),
+  phone: z.string().min(5, "Please enter a valid phone number."),
+  imis_id: z.string().nullable().optional(),
+  ym_region: z.string().nullable().optional(),
+  ym_district: z.string().nullable().optional(),
+  ym_zone: z.string().nullable().optional(),
+  ym_club: z.string().nullable().optional(),
+});
+
+/**
+ * Updates the user's personal profile details.
+ */
+export async function updatePersonalProfile(formData: {
+  full_name: string;
+  phone: string;
+  imis_id?: string | null;
+  ym_region?: string | null;
+  ym_district?: string | null;
+  ym_zone?: string | null;
+  ym_club?: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+  return withAuthAction(async (supabase, user) => {
+    try {
+      // Validate inputs server-side
+      const validated = personalProfileUpdateSchema.parse(formData);
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: validated.full_name,
+          phone: validated.phone,
+          imis_id: validated.imis_id || null,
+          ym_region: validated.ym_region || null,
+          region: validated.ym_region || null, // Sync both columns
+          ym_district: validated.ym_district || null,
+          ym_zone: validated.ym_zone || null,
+          ym_club: validated.ym_club || null,
+          club: validated.ym_club || null, // Sync both columns
+        })
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Database error updating personal profile:", error);
+        return { success: false, error: "Failed to update personal profile in database." };
+      }
+
+      revalidatePath("/dashboard/profile");
+      revalidatePath("/dashboard");
+      return { success: true };
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return { success: false, error: err.issues[0].message };
+      }
+      return { success: false, error: "An unexpected error occurred." };
+    }
+  }, { success: false, error: "Authentication failed. Please log in again." });
+}
+

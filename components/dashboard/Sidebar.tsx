@@ -79,12 +79,15 @@ export default function Sidebar({ profile }: SidebarProps) {
       case "member":
       default:
         roleLinks = [
-          { name: "My Profile", href: "/dashboard", icon: User },
+          { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
           { name: "Referral Hub", href: "/dashboard/referrals", icon: Share2 },
           { name: "Register Business", href: "/dashboard/onboarding", icon: Plus },
         ];
         break;
     }
+
+    // Add My Profile unconditionally to all roles
+    roleLinks.push({ name: "My Profile", href: "/dashboard/profile", icon: User });
     
     // Append ?view=owner if impersonating
     if (isOwnerView && (profile.app_role === "super_admin" || profile.app_role === "region_admin")) {
