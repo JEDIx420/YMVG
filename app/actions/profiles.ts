@@ -166,6 +166,9 @@ export async function updatePersonalProfile(formData: {
 
       if (error) {
         console.error("Database error updating personal profile:", error);
+        if (error.message && error.message.includes("IMIS_LIMIT_REACHED")) {
+          return { success: false, error: "This IMIS ID has reached its maximum account linking limit." };
+        }
         return { success: false, error: "Failed to update personal profile in database." };
       }
 

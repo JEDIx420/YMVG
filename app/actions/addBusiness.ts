@@ -30,6 +30,9 @@ export async function addBusiness(
 
     if (error) {
       console.error("Database Insert Error:", error);
+      if (error.message && error.message.includes("BUSINESS_LIMIT_REACHED")) {
+        return { success: false, error: "You have reached the maximum limit of 5 business profiles." };
+      }
       return { success: false, error: error.message };
     }
 
