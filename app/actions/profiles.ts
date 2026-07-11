@@ -72,6 +72,7 @@ export async function updateProfile(formData: {
           full_name: validated.full_name,
           phone: validated.phone,
           club: validated.club,
+          ym_club: validated.club, // Sync both columns
         })
         .eq("user_id", user.id);
 
@@ -136,6 +137,7 @@ const personalProfileUpdateSchema = z.object({
   ym_district: z.string().nullable().optional(),
   ym_zone: z.string().nullable().optional(),
   ym_club: z.string().nullable().optional(),
+  club: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
   state: z.string().nullable().optional(),
@@ -158,6 +160,7 @@ export async function updatePersonalProfile(formData: FormData): Promise<{ succe
       const rawYmDistrict = formData.get("ym_district");
       const rawYmZone = formData.get("ym_zone");
       const rawYmClub = formData.get("ym_club");
+      const rawClub = formData.get("club");
       const rawAddress = formData.get("address");
       const rawCity = formData.get("city");
       const rawState = formData.get("state");
@@ -179,6 +182,7 @@ export async function updatePersonalProfile(formData: FormData): Promise<{ succe
       const ym_district = sanitizeString(rawYmDistrict);
       const ym_zone = sanitizeString(rawYmZone);
       const ym_club = sanitizeString(rawYmClub);
+      const club = sanitizeString(rawClub);
       const address = sanitizeString(rawAddress);
       const city = sanitizeString(rawCity);
       const state = sanitizeString(rawState);
@@ -195,6 +199,7 @@ export async function updatePersonalProfile(formData: FormData): Promise<{ succe
         ym_district,
         ym_zone,
         ym_club,
+        club,
         address,
         city,
         state,
@@ -202,6 +207,8 @@ export async function updatePersonalProfile(formData: FormData): Promise<{ succe
         education,
         job_title,
       });
+
+      const incomingClub = validated.ym_club?.trim() || validated.club?.trim() || null;
 
       const { error } = await supabase
         .from("profiles")
@@ -213,8 +220,8 @@ export async function updatePersonalProfile(formData: FormData): Promise<{ succe
           region: validated.ym_region || null, // Sync both columns
           ym_district: validated.ym_district || null,
           ym_zone: validated.ym_zone || null,
-          ym_club: validated.ym_club || null,
-          club: validated.ym_club || null, // Sync both columns
+          ym_club: incomingClub,
+          club: incomingClub,
           address: validated.address || null,
           city: validated.city || null,
           state: validated.state || null,

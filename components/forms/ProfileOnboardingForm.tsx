@@ -8,6 +8,7 @@ import * as z from "zod";
 import { updateProfile } from "@/app/actions/profiles";
 import { Loader2, User, Phone, MapPin, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Profile } from "@/types/database.types";
 
 const profileSchema = z.object({
   full_name: z.string().min(2, "Full name must be at least 2 characters."),
@@ -20,9 +21,10 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 interface ProfileOnboardingFormProps {
   initialEmail: string;
   initialName?: string | null;
+  profile: Profile;
 }
 
-export default function ProfileOnboardingForm({ initialEmail, initialName }: ProfileOnboardingFormProps) {
+export default function ProfileOnboardingForm({ initialEmail, initialName, profile }: ProfileOnboardingFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -34,9 +36,9 @@ export default function ProfileOnboardingForm({ initialEmail, initialName }: Pro
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      full_name: initialName || "",
-      phone: "",
-      club: "",
+      full_name: profile.full_name || initialName || "",
+      phone: profile.phone || "",
+      club: profile.club || profile.ym_club || "",
     },
   });
 

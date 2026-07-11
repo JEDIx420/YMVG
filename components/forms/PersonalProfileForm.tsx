@@ -73,7 +73,7 @@ export default function PersonalProfileForm({ profile, linkedBusinesses }: Perso
       ym_region: profile.ym_region || "",
       ym_district: profile.ym_district || "",
       ym_zone: profile.ym_zone || "",
-      ym_club: profile.ym_club || "",
+      ym_club: profile.ym_club || profile.club || "",
       address: profile.address || "",
       city: profile.city || "",
       state: profile.state || "",
@@ -95,7 +95,10 @@ export default function PersonalProfileForm({ profile, linkedBusinesses }: Perso
       if (data.ym_region) formData.append("ym_region", data.ym_region);
       if (data.ym_district) formData.append("ym_district", data.ym_district);
       if (data.ym_zone) formData.append("ym_zone", data.ym_zone);
-      if (data.ym_club) formData.append("ym_club", data.ym_club);
+      if (data.ym_club) {
+        formData.append("ym_club", data.ym_club);
+        formData.append("club", data.ym_club);
+      }
       if (data.address) formData.append("address", data.address);
       if (data.city) formData.append("city", data.city);
       if (data.state) formData.append("state", data.state);

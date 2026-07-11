@@ -39,6 +39,7 @@ export default async function DashboardLayout({
           <ProfileOnboardingForm 
             initialEmail={profile.email} 
             initialName={profile.full_name} 
+            profile={profile}
           />
         </div>
       </div>
