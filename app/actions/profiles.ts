@@ -25,6 +25,12 @@ export type Profile = {
   ym_district?: string | null;
   ym_zone?: string | null;
   ym_club?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  education?: string | null;
+  job_title?: string | null;
 };
 
 /**
@@ -130,24 +136,72 @@ const personalProfileUpdateSchema = z.object({
   ym_district: z.string().nullable().optional(),
   ym_zone: z.string().nullable().optional(),
   ym_club: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  country: z.string().nullable().optional(),
+  education: z.string().nullable().optional(),
+  job_title: z.string().nullable().optional(),
 });
 
 /**
  * Updates the user's personal profile details.
  */
-export async function updatePersonalProfile(formData: {
-  full_name: string;
-  phone: string;
-  imis_id?: string | null;
-  ym_region?: string | null;
-  ym_district?: string | null;
-  ym_zone?: string | null;
-  ym_club?: string | null;
-}): Promise<{ success: boolean; error?: string }> {
+export async function updatePersonalProfile(formData: FormData): Promise<{ success: boolean; error?: string }> {
   return withAuthAction(async (supabase, user) => {
     try {
-      // Validate inputs server-side
-      const validated = personalProfileUpdateSchema.parse(formData);
+      // 1. Extract values
+      const rawFullName = formData.get("full_name");
+      const rawPhone = formData.get("phone");
+      const rawImisId = formData.get("imis_id");
+      const rawYmRegion = formData.get("ym_region");
+      const rawYmDistrict = formData.get("ym_district");
+      const rawYmZone = formData.get("ym_zone");
+      const rawYmClub = formData.get("ym_club");
+      const rawAddress = formData.get("address");
+      const rawCity = formData.get("city");
+      const rawState = formData.get("state");
+      const rawCountry = formData.get("country");
+      const rawEducation = formData.get("education");
+      const rawJobTitle = formData.get("job_title");
+
+      // 2. Sanitize values
+      const sanitizeString = (val: unknown) => {
+        if (typeof val !== "string") return null;
+        const trimmed = val.trim();
+        return trimmed === "" ? null : trimmed;
+      };
+
+      const full_name = typeof rawFullName === "string" ? rawFullName.trim() : "";
+      const phone = typeof rawPhone === "string" ? rawPhone.trim() : "";
+      const imis_id = sanitizeString(rawImisId);
+      const ym_region = sanitizeString(rawYmRegion);
+      const ym_district = sanitizeString(rawYmDistrict);
+      const ym_zone = sanitizeString(rawYmZone);
+      const ym_club = sanitizeString(rawYmClub);
+      const address = sanitizeString(rawAddress);
+      const city = sanitizeString(rawCity);
+      const state = sanitizeString(rawState);
+      const country = sanitizeString(rawCountry);
+      const education = sanitizeString(rawEducation);
+      const job_title = sanitizeString(rawJobTitle);
+
+      // 3. Validate inputs server-side
+      const validated = personalProfileUpdateSchema.parse({
+        full_name,
+        phone,
+        imis_id,
+        ym_region,
+        ym_district,
+        ym_zone,
+        ym_club,
+        address,
+        city,
+        state,
+        country,
+        education,
+        job_title,
+      });
 
       const { error } = await supabase
         .from("profiles")
@@ -161,6 +215,12 @@ export async function updatePersonalProfile(formData: {
           ym_zone: validated.ym_zone || null,
           ym_club: validated.ym_club || null,
           club: validated.ym_club || null, // Sync both columns
+          address: validated.address || null,
+          city: validated.city || null,
+          state: validated.state || null,
+          country: validated.country || null,
+          education: validated.education || null,
+          job_title: validated.job_title || null,
         })
         .eq("user_id", user.id);
 
@@ -179,7 +239,7 @@ export async function updatePersonalProfile(formData: {
       if (err instanceof z.ZodError) {
         return { success: false, error: err.issues[0].message };
       }
-      return { success: false, error: "An unexpected error occurred." };
+      return { success: false, error: err.message || "An unexpected error occurred." };
     }
   }, { success: false, error: "Authentication failed. Please log in again." });
 }

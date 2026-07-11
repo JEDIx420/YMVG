@@ -47,5 +47,11 @@ export interface Profile {
   ym_district?: string | null;
   ym_zone?: string | null;
   ym_club?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  education?: string | null;
+  job_title?: string | null;
 }
 
