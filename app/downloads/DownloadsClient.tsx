@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Download, Search, CheckCircle2 } from 'lucide-react';
+import { Download, Search, CheckCircle2, FileText, FileSpreadsheet, File } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface DownloadItem {
@@ -37,7 +37,41 @@ const DOWNLOAD_ITEMS: DownloadItem[] = [
     description: "The official emblem for the SWIR 2026-27 Minor Project, \"Say No To Drugs.\" This campaign focuses on youth awareness, community education, and proactive prevention strategies against substance abuse. Use this for campus initiatives and awareness rallies.",
     type: "Image (JPG)",
   },
+  {
+    file: "/Charter-Application.pdf",
+    title: "Y's Men International Charter Application",
+    description: "The official application document to organise and maintain an affiliated Y's Men's club. It includes required signature fields for charter members pledging to the movement's objectives.",
+    type: "DOCUMENT (PDF)",
+  },
+  {
+    file: "/Model-Constitution-for-a-Local-Club.docx",
+    title: "Model Constitution for a Y's Men's Club",
+    description: "A customizable template outlining the fundamental purpose, objectives, officer duties, and membership rules for a local club. It is designed to be adapted to local conditions before final adoption.",
+    type: "DOCUMENT (DOCX)",
+  },
+  {
+    file: "/Procedures-for-Charter.pdf",
+    title: "Procedures for the Charter of New Clubs",
+    description: "Step-by-step guidelines for Regional Directors on applying for a new club charter. It details the required documentation, timeline requirements, and online submission process.",
+    type: "DOCUMENT (PDF)",
+  },
+  {
+    file: "/Roster-Template.xlsx",
+    title: "Roster Template",
+    description: "The standardized spreadsheet used to record all charter member details. It includes mandatory fields for names in the Latin alphabet, contact information, and postal addresses.",
+    type: "SPREADSHEET (XLSX)",
+  },
 ];
+
+const isImage = (file: string) => {
+  const lowercaseFile = file.toLowerCase();
+  return lowercaseFile.endsWith('.jpg') || 
+         lowercaseFile.endsWith('.jpeg') || 
+         lowercaseFile.endsWith('.png') || 
+         lowercaseFile.endsWith('.gif') || 
+         lowercaseFile.endsWith('.svg') || 
+         lowercaseFile.endsWith('.webp');
+};
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -102,14 +136,45 @@ export default function DownloadsClient() {
             >
               {/* Visual Preview Area */}
               <div className="relative h-60 w-full bg-slate-50 flex items-center justify-center p-6 border-b border-slate-100">
-                <div className="relative w-full h-full">
-                  <Image
-                    src={item.file}
-                    alt={item.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    className="object-contain"
-                  />
+                <div className="relative w-full h-full flex flex-col items-center justify-center">
+                  {isImage(item.file) ? (
+                    <Image
+                      src={item.file}
+                      alt={item.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-contain"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      {/* Document Card Visual Representation */}
+                      <div className="relative w-24 h-28 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col justify-between p-3.5 hover:scale-105 transition-transform duration-300">
+                        {/* Top-Right Dog-Ear Fold Effect */}
+                        <div className="absolute top-0 right-0 w-6 h-6 bg-slate-100 border-l border-b border-slate-200 rounded-bl-lg rounded-tr-md"></div>
+                        
+                        {/* File Icon */}
+                        <div className="flex-grow flex items-center justify-center mt-2">
+                          {item.file.endsWith('.pdf') ? (
+                            <FileText className="w-12 h-12 text-rose-500" />
+                          ) : item.file.endsWith('.xlsx') ? (
+                            <FileSpreadsheet className="w-12 h-12 text-emerald-600" />
+                          ) : item.file.endsWith('.docx') ? (
+                            <FileText className="w-12 h-12 text-blue-600" />
+                          ) : (
+                            <File className="w-12 h-12 text-slate-500" />
+                          )}
+                        </div>
+
+                        {/* File Extension Indicator at bottom */}
+                        <div className="text-[10px] font-bold text-center text-slate-400 select-none">
+                          {item.file.split('.').pop()?.toUpperCase()}
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest bg-slate-200/50 px-2 py-0.5 rounded border border-slate-200/70">
+                        {item.type.split(' ').pop()}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
