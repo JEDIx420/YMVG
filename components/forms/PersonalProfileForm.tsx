@@ -432,7 +432,7 @@ export default function PersonalProfileForm({ profile, linkedBusinesses }: Perso
             {linkedBusinesses.map((business) => (
               <Link
                 key={business.id}
-                href={`/dashboard/business/${business.id}`}
+                href={`/dashboard/business/${business.id}/edit`}
                 className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 border border-slate-200/60 hover:border-slate-300 hover:bg-slate-50 transition-all group/card"
               >
                 <div className="flex items-center gap-4 min-w-0">
