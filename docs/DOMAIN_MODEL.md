@@ -1,15 +1,19 @@
 # Database Schema, Roles & Row-Level Security (RLS)
 
+> Authoritative current context: [`YMBD_SOURCE_OF_TRUTH.md`](YMBD_SOURCE_OF_TRUTH.md). This file is a compact schema reference; migration presence does not prove hosted application.
+
 ## 1. Table: `profiles`
 * `id` (UUID, PK) - Maps to unique profile records.
 * `user_id` (UUID, FK, Unique, Nullable) - Link to `auth.users.id`.
 * `email` (Text, Unique) - Registered user email address.
 * `full_name` (Text, Nullable) - Display name.
 * `phone` (Text, Nullable) - Member private contact number.
-* `club` (Text, Nullable) - Local Club name.
+* `club_id` (UUID, FK, Nullable) - Authoritative SWIR club identity.
+* `club`, `ym_club`, `ym_district`, `ym_zone`, `ym_region` - Derived/legacy compatibility text.
 * `app_role` (public.app_role Enum) - Tier levels: `member`, `business_owner`, `review_admin`, `super_admin`.
+* `account_approved_at` (Timestamptz, Nullable) - Private dashboard eligibility marker.
 * `imis_id` (Text, Nullable) - International Member identification ID.
-* *Columns `id`, `user_id`, `email`, `created_at`, `app_role` are immutable and protected by triggers.*
+* *Protected columns include identity, role, approval, `club_id`, and derived hierarchy; controlled RPCs perform approved binding and club assignment.*
 
 ## 2. Table: `businesses`
 * `id` (UUID, PK) - Primary identifier.
@@ -28,6 +32,7 @@
 * `website_url`, `logo_url`, `primary_image_url`, `gallery_urls`, `brochure_url` - Asset pointers.
 * `sponsorship_tier` (Double Precision) - Sponsored boost level.
 * `ym_region`, `ym_zone`, `ym_district`, `ym_club`, `ym_designation` - Y's Men International affiliations.
+* `club_id` (UUID, FK, Nullable) - Authoritative affiliation for standardized listings.
 
 ## 3. Table: `role_audit`
 * `id` (UUID, PK) - Audit log unique identifier.
@@ -48,7 +53,9 @@
   - `SELECT` granted to `anon` and `authenticated`.
 * **Table `profiles`:**
   - `SELECT`: Allowed for owner, `review_admin`, and `super_admin`.
-  - `UPDATE`: Broad update revoked. Column-level update permissions granted only to authenticated owners on editable profile details (e.g. full_name, phone, club).
+  - `UPDATE`: Broad update revoked. Column-level update is limited to ordinary personal fields. Club changes use `set_my_initial_club()` or `assign_profile_club()`.
 * **Table `leads`:**
   - `SELECT`: Scoped to business owners reading leads for their listing, `review_admin`, and `super_admin`.
   - `INSERT/UPDATE/DELETE`: Broad write permissions revoked from public client roles. Inserts must execute server-side via Server Actions utilizing the service role.
+
+Additional current tables include `swir_clubs`, `profile_club_audit`, `registration_requests`, `registration_request_audit`, and `onboarding_auth_audit`; see the source-of-truth document and migrations `018`-`023`.

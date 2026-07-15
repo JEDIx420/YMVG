@@ -1,5 +1,7 @@
 # YMI Auth & Session Management Specification
 
+> **Historical document:** This predates approval-based signup and migration `022`. Its open Google-only provisioning and `region_admin` descriptions are not current. Use [`docs/YMBD_SOURCE_OF_TRUTH.md`](docs/YMBD_SOURCE_OF_TRUTH.md) for active authentication and permissions.
+
 This document outlines the Authentication, Authorization, and Session Management processes for the YMI South West India Region (SWIR) Business Directory.
 
 ---

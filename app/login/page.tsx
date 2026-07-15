@@ -72,7 +72,7 @@ export default function LoginPage() {
             <div className="space-y-3 border-t border-white/10 pt-6 text-sm text-blue-100/80">
               <p>New to YMBD? Submit an account request for reviewer approval.</p>
               <Link href="/signup" className="inline-flex items-center gap-2 font-bold text-white hover:text-red-300">
-                Apply for an account <UserPlus className="h-4 w-4" />
+                Register <UserPlus className="h-4 w-4" />
               </Link>
             </div>
           </div>
@@ -137,7 +137,7 @@ export default function LoginPage() {
 
           <div className="mt-8 grid gap-3 border-t border-slate-100 pt-6 sm:grid-cols-2">
             <Link href="/signup" className="flex items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-100">
-              <UserPlus className="h-4 w-4" /> Apply for an account
+              <UserPlus className="h-4 w-4" /> Register
             </Link>
             <a href={YSMEN_ENROLL_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200">
               Enroll as a Y&apos;s Man <ExternalLink className="h-4 w-4" />

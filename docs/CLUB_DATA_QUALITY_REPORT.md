@@ -1,5 +1,7 @@
 # SWIR Club Data-Quality Report
 
+> Authoritative project context: [`YMBD_SOURCE_OF_TRUTH.md`](YMBD_SOURCE_OF_TRUTH.md). This report is the focused provenance and review record for migration `019`.
+
 Source: `public/SWIR CLUB STATUS 2025-26.pdf`
 
 Extraction was checked against rendered images of all four PDF pages. The source has 169 club rows and 168 unique club iMIS IDs. The canonical seed contains one row per unique iMIS ID.

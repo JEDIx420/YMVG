@@ -1,5 +1,7 @@
 # Dynamic JSON Blog System Documentation
 
+> **Supplemental feature note:** For authoritative project architecture, security, and deployment context, see [`docs/YMBD_SOURCE_OF_TRUTH.md`](docs/YMBD_SOURCE_OF_TRUTH.md). Verify this feature note against `app/blog/` before changing it.
+
 This project features a file-based dynamic blog system. To publish or update blog posts, you do not need to modify any code or configure database collections. Simply add or update JSON files under the `public/blogs/` directory in the repository and push to GitHub.
 
 ---
@@ -18,8 +20,8 @@ graph TD
     E --> G[User reads blog post with fast SSG speed]
 ```
 
-- **Scanning**: The index page [page.tsx](file:///Users/vincyvincent/ymbd/app/blog/page.tsx) uses Node.js `fs` to list all JSON files under `public/blogs/`, parses their metadata, and displays cards sorted by date (newest first).
-- **Static Generation (SSG)**: The dynamic page [[slug]/page.tsx](file:///Users/vincyvincent/ymbd/app/blog/[slug]/page.tsx) implements `generateStaticParams()`. During the build phase, it lists the slugs based on JSON filenames, allowing Next.js to pre-render the pages.
+- **Scanning**: The index page [`app/blog/page.tsx`](app/blog/page.tsx) uses Node.js `fs` to list all JSON files under `public/blogs/`, parses their metadata, and displays cards sorted by date (newest first).
+- **Static Generation (SSG)**: The dynamic page [`app/blog/[slug]/page.tsx`](app/blog/[slug]/page.tsx) implements `generateStaticParams()`. During the build phase, it lists the slugs based on JSON filenames, allowing Next.js to pre-render the pages.
 - **Dynamic SEO Metadata**: The system exports a `generateMetadata` function that dynamically extracts the meta description and title directly from the JSON files to optimize for search engines.
 
 ---

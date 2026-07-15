@@ -1,5 +1,7 @@
 # YMBD Approval-Based Onboarding Deployment Guide
 
+> Authoritative project context: [`YMBD_SOURCE_OF_TRUTH.md`](YMBD_SOURCE_OF_TRUTH.md). This file remains the focused operational sequence for approval onboarding.
+
 This rollout is staged so every existing `public.profiles` row remains approved and migration 022 is delayed until the updated callback is deployed and verified. The coding agent prepares files only. The project owner performs every hosted Supabase, deployment, and Dashboard action.
 
 ## Stage 1 - Project Owner Runs in Supabase SQL Editor
@@ -40,6 +42,11 @@ This rollout is staged so every existing `public.profiles` row remains approved 
 5. **PROJECT OWNER CONFIGURES IN SUPABASE DASHBOARD** - Select schema `public`, function `before_user_created_approved_email`, enable the hook, and save.
 6. **PROJECT OWNER CONFIGURES IN SUPABASE DASHBOARD** - Migration 022 already grants schema usage, table reads under RLS, and function execution to `supabase_auth_admin`; it revokes hook execution from `anon`, `authenticated`, and `PUBLIC`.
 7. **PROJECT OWNER DEPLOYS** - Retest an existing approved login, an approved first login, and an unapproved login. The callback gate remains mandatory even when the hook is enabled.
+
+## Stage 4 - Profile Privilege Lock
+
+1. **PROJECT OWNER RUNS IN SUPABASE** - After Stage 3 succeeds, run `supabase/migrations/023_lock_profile_insert_privileges.sql`.
+2. **PROJECT OWNER RUNS IN SUPABASE** - Run `supabase/manual/05_verify_profile_privileges.sql` and confirm anonymous profile access and authenticated profile insertion/role mutation are false while authenticated `SELECT` is true.
 
 Supabase's current Auth Hook contract is documented at [Before User Created Hook](https://supabase.com/docs/guides/auth/auth-hooks/before-user-created-hook).
 

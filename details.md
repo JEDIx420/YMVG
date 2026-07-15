@@ -1,5 +1,7 @@
 # Y's Men International (SWIR) - Comprehensive Technical Documentation
 
+> **Historical document:** This describes active NVIDIA hybrid search, legacy roles, and pre-approval onboarding. Those statements are obsolete. The authoritative current reference is [`docs/YMBD_SOURCE_OF_TRUTH.md`](docs/YMBD_SOURCE_OF_TRUTH.md).
+
 This document provides a highly comprehensive, production-grade technical breakdown of the Y's Men International South West India Region (SWIR) Business Directory and Regional Hub website. It details the complete architecture, tech stack, database schemas, AI-driven hybrid search pipeline, security controls, dynamic page designs, partner tooling, monetization features, and search engine optimization (SEO) configurations.
 
 ---

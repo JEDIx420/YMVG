@@ -1,5 +1,7 @@
 # Y's Men's International Business Directory - Hybrid Search Architecture
 
+> **Historical document:** NVIDIA embeddings and vector/hybrid search are not active in the current directory path. Current search is PostgreSQL keyword/full-text search through `keyword_search_businesses()`. See [`docs/YMBD_SOURCE_OF_TRUTH.md`](docs/YMBD_SOURCE_OF_TRUTH.md).
+
 This document provides a highly detailed, production-ready specification of the entire hybrid search, vector embedding, ad campaign boost calculations, and dynamic filtering pipeline implemented in the Y's Men's International Business Directory. It traces execution paths from the frontend user interface down to the low-level PostgreSQL vector algebra, reciprocal rank fusion mathematics, and automatic search fallback behaviors.
 
 ---
@@ -80,7 +82,7 @@ Where `boost_multiplier` ranges from $1.1x$ up to $3.0x$ based on the tier purch
 
 ## 2. Upgraded Database Function Script
 
-Below is the **actual** RPC signature defined in [009_upgraded_hybrid_search.sql](file:///Users/vincyvincent/ymbd/supabase/migrations/009_upgraded_hybrid_search.sql):
+Below is the historical RPC signature defined in [`supabase/migrations/009_upgraded_hybrid_search.sql`](supabase/migrations/009_upgraded_hybrid_search.sql):
 
 ```sql
 CREATE OR REPLACE FUNCTION public.hybrid_search_businesses(

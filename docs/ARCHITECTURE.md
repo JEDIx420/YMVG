@@ -1,12 +1,14 @@
 # Architectural Boundaries & Tech Stack
 
+> Authoritative current context: [`YMBD_SOURCE_OF_TRUTH.md`](YMBD_SOURCE_OF_TRUTH.md). This file is a focused architecture summary.
+
 ## Core Stack
 * **Frontend:** Next.js (App Router), React, Tailwind CSS.
-* **Backend & Auth:** Supabase (PostgreSQL, Google OAuth, Storage).
+* **Backend & Auth:** Supabase (PostgreSQL, Google OAuth, magic links, approval-gated activation, Storage client APIs).
 * **Hosting:** Netlify.
 
 ## Authentication & Role-Based Access Control (RBAC)
-We enforce a strict hierarchical RBAC model:
+The active permission roles are:
 ```
 member -> business_owner -> review_admin -> super_admin
 ```
@@ -17,11 +19,12 @@ member -> business_owner -> review_admin -> super_admin
 ## Directory Data Privacy & Isolation
 * **Public Access View:** Direct SELECT access on the base `businesses` table is revoked from anonymous and public roles. All public requests read from `public.public_businesses` view defined with `security_barrier = true`, filtering out private owner profiles, emails, phones, and international `imis_id` values.
 * **RLS Protection:** Authenticated owners can select/update their own businesses. Reviewers (`review_admin`) and `super_admin` have read access, but only the personal owner or `super_admin` may execute updates. Deletions are restricted exclusively to `super_admin`.
-* **Lead CRM Hardening:** Direct database inserts on the `leads` table are blocked for public and authenticated clients. All submissions must route through the `sendLead` Server Action which performs schema parsing, validation, and dispatches mails via Resend. The lead BCC audit parameter is temporarily active pending a final privacy resolution.
+* **Lead CRM Hardening:** Direct database inserts on the `leads` table are blocked for public and authenticated clients. All submissions route through the `sendLead` Server Action, which validates, inserts with the server-only client, and dispatches through Resend. A hard-coded BCC remains verified technical debt.
 
 ## Search Pipeline
 * **Keyword Search RPC:** Bypasses legacy vector embeddings and NVIDIA reranking in favor of PostgreSQL-native Full-Text Keyword Search (`public.keyword_search_businesses`). It filters by category/city and dynamically boosts active sponsored campaigns.
 * **pgvector Extension:** The `vector` extension remains active for unrelated or auxiliary functions, but is fully bypassed in the core catalog search.
+* **Legacy NVIDIA Code:** `app/actions/rerankBusinesses.ts` remains but has no repository caller. It is dormant, not part of active search.
 
 ## UI/UX Standards & Interactions
 * **Motion Library:** `framer-motion` handles page slide entrances (`app/template.tsx`), staggered grid entries, and animated search results layout changes.

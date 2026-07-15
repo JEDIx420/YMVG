@@ -1,5 +1,7 @@
 # Technical Debt Audit Report - Status & Progress
 
+> **Historical audit snapshot:** Several resolutions below, including synchronous NVIDIA embedding updates, no longer describe current code. Use [`docs/YMBD_SOURCE_OF_TRUTH.md`](docs/YMBD_SOURCE_OF_TRUTH.md) for the verified current debt list.
+
 This document tracks identified technical debt across the `components/` and `app/actions/` directories, marking status and recommendations.
 
 ---

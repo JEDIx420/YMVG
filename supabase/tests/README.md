@@ -1,5 +1,7 @@
 # YMBD Database Security Hardening Tests
 
+> Authoritative project context: [`../../docs/YMBD_SOURCE_OF_TRUTH.md`](../../docs/YMBD_SOURCE_OF_TRUTH.md). These tests are prepared database tests; repository presence is not evidence that they passed.
+
 This directory contains database-level integration and security tests written using pgTAP.
 
 ## Prerequisites
@@ -13,7 +15,7 @@ Run the following commands in order in the project root directory:
 # 1. Start the local Supabase environment (launches Docker containers)
 npx supabase start
 
-# 2. Reset the database to apply all migrations (001 through 022) fresh
+# 2. Reset the database to apply all migrations (001 through 023) fresh
 npx supabase db reset
 
 # 3. Run the pgTAP test suite against the local database

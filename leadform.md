@@ -1,5 +1,7 @@
 # YMI Business Directory - Lead CRM & Inquiry System
 
+> **Historical feature document:** Its `region_admin` and older access descriptions are obsolete. Use [`docs/YMBD_SOURCE_OF_TRUTH.md`](docs/YMBD_SOURCE_OF_TRUTH.md) for current lead security, service-role boundaries, BCC behavior, and Turnstile status.
+
 This document outlines the architecture, database schema, RLS policies, and email rendering pipeline of the customer inquiry and Lead CRM systems in the YMI South West India Region (SWIR) Business Directory.
 
 ---

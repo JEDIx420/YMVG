@@ -1,5 +1,7 @@
 # Y's Men International (SWIR) - Backend Architecture & Technical Reference
 
+> **Historical document:** This describes the retired active NVIDIA/vector search and legacy role model. It must not be used for current implementation or security decisions. Use [`docs/YMBD_SOURCE_OF_TRUTH.md`](docs/YMBD_SOURCE_OF_TRUTH.md).
+
 This document provides an exhaustive, production-grade technical specification of the backend ecosystem powering the Y's Men International South West India Region (SWIR) Business Directory. It details the server-side architecture, PostgreSQL schemas, AI/vector pipeline mathematics, security rules, authentication flows, email systems, and storage buckets.
 
 ---

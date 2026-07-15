@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# YMBD
 
-## Getting Started
+YMBD is the Y's Men's Business Directory and approval-based member platform for Y's Men International, South West India Region (SWIR).
 
-First, run the development server:
+> For complete architecture, security, onboarding, database and deployment context, see [`docs/YMBD_SOURCE_OF_TRUTH.md`](docs/YMBD_SOURCE_OF_TRUTH.md).
+
+## Local Development
+
+Prerequisites: Node.js, npm, and environment values based on `.env.example`.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Checks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx tsc --noEmit
+npm run lint
+npm run build
+```
 
-## Learn More
+Database pgTAP tests require a disposable local Supabase/Docker environment; see [`supabase/tests/README.md`](supabase/tests/README.md). Never point tests or unreviewed SQL at production.
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The Next.js application is configured for Netlify. Supabase migrations are reviewed forward-only SQL files and are executed manually by the project owner. Approval-onboarding sequencing is documented in [`docs/ONBOARDING_DEPLOYMENT_GUIDE.md`](docs/ONBOARDING_DEPLOYMENT_GUIDE.md).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Do not edit applied migrations, expose service-role secrets, or infer hosted database state from repository file presence.

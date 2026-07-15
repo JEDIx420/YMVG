@@ -1,5 +1,7 @@
 # YMI SWIR Business Directory - Architectural Upgrade Blueprint & Execution Roadmap
 
+> **Historical blueprint:** The completion/deployment claims, hard-coded super-admin provisioning, open profile creation, and elevated `region_admin` model below are obsolete and unsafe as current guidance. Use [`docs/YMBD_SOURCE_OF_TRUTH.md`](docs/YMBD_SOURCE_OF_TRUTH.md).
+
 > [!NOTE]
 > **Current Status: COMPLETED**  
 > All 6 phases of the architectural and security upgrades have been fully executed, audited for strict RLS/RBAC scoping, validated for Rules of Hooks conformity, compiled with zero errors, and successfully deployed.
@@ -596,7 +598,7 @@ The main dashboard server component was refactored to supply rich data to AdminV
 * **Super Admin Dashboard Refactor**:
   * **Removed Activity Feed**: Deleted the "Real-Time System Actions" event feed and removed the associated parsing code (merging recent profiles, recent campaigns, and recent businesses).
   * **Optimized Database Fetching**: Refactored the `Promise.all` inside `app/dashboard/page.tsx`'s admin switch. Removed calls fetching `recentProfiles`, `recentCampaigns`, and `recentBusinesses`, resulting in a significantly faster initial page load.
-  * **Interactive Platform Area Chart**: Modified `app/dashboard/page.tsx` to fetch the last 30 days of analytics events. Redesigned [AdminView.tsx](file:///Users/vincyvincent/ymbd/app/dashboard/components/AdminView.tsx) to parse views and referrals through a `useMemo` block, displaying them in a premium `recharts` responsive Area Chart using linear gradients (deep blue `#1e3a8a` for Page Views and crimson red `#dc2626` for Referral Clicks).
+  * **Interactive Platform Area Chart**: Modified `app/dashboard/page.tsx` to fetch the last 30 days of analytics events. Redesigned [`AdminView.tsx`](app/dashboard/components/AdminView.tsx) to parse views and referrals through a `useMemo` block, displaying them in a premium `recharts` responsive Area Chart using linear gradients (deep blue `#1e3a8a` for Page Views and crimson red `#dc2626` for Referral Clicks).
 * **Business Owner Sidebar Cleanup**:
-  * **Removed Billing Links**: Modified [Sidebar.tsx](file:///Users/vincyvincent/ymbd/components/dashboard/Sidebar.tsx) to remove the standalone "Billing" navigation menu item from the `business_owner` nav list.
+  * **Removed Billing Links**: Modified [`Sidebar.tsx`](components/dashboard/Sidebar.tsx) to remove the standalone "Billing" navigation menu item from the `business_owner` nav list.
   * **Cleaned dead routes**: Deleted the obsolete route directory `app/dashboard/billing` entirely, ensuring no dead route URLs remain in the codebase.

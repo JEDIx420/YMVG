@@ -1,5 +1,7 @@
 # YMI Business Directory - Portfolio Architecture (1-to-Many)
 
+> **Historical feature document:** Ownership, club derivation, privacy, and role rules have changed since this was written. Use [`docs/YMBD_SOURCE_OF_TRUTH.md`](docs/YMBD_SOURCE_OF_TRUTH.md) and current migrations for implementation decisions.
+
 This document provides a technical specification of the Business Portfolio Architecture, mapping out how the platform supports multiple business listings per user profile.
 
 ---
