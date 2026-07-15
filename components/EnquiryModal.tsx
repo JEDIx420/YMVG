@@ -7,6 +7,7 @@ import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, CheckCircle, AlertCircle } from "lucide-react";
 import { sendLead } from "@/app/actions/sendLead";
+import Turnstile from "./Turnstile";
 
 const enquirySchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -27,6 +28,10 @@ interface EnquiryModalProps {
 export default function EnquiryModal({ isOpen, onClose, businessId, businessName }: EnquiryModalProps) {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  const turnstileEnabled = process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true";
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   const {
     control,
@@ -44,11 +49,24 @@ export default function EnquiryModal({ isOpen, onClose, businessId, businessName
   });
 
   const onSubmit = async (data: EnquiryFormData) => {
+    if (turnstileEnabled && !turnstileSiteKey) {
+      setStatus("error");
+      setErrorMessage("System configuration error. Please contact administration.");
+      return;
+    }
+
+    if (turnstileEnabled && !turnstileToken) {
+      setStatus("error");
+      setErrorMessage("Please complete the spam verification check.");
+      return;
+    }
+
     setStatus("submitting");
     try {
-      const result = await sendLead({ ...data, businessId });
+      const result = await sendLead({ ...data, businessId, token: turnstileEnabled ? turnstileToken : null });
       if (result.success) {
         setStatus("success");
+        setTurnstileToken(null);
         setTimeout(() => {
           onClose();
           setStatus("idle");
@@ -188,6 +206,12 @@ export default function EnquiryModal({ isOpen, onClose, businessId, businessName
                     {errors.message && <p className="text-xs text-red-500 font-bold">{errors.message.message}</p>}
                   </div>
 
+                  {turnstileEnabled && turnstileSiteKey && (
+                    <div className="my-4">
+                      <Turnstile siteKey={turnstileSiteKey} onVerify={setTurnstileToken} />
+                    </div>
+                  )}
+
                   <button
                     type="submit"
                     disabled={status === "submitting"}
@@ -219,7 +243,7 @@ export default function EnquiryModal({ isOpen, onClose, businessId, businessName
             
             <div className="bg-slate-50 p-4 text-center">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Protected by Y's Men's International Regional Privacy Standards
+                Protected by Y&apos;s Men&apos;s International Regional Privacy Standards
               </p>
             </div>
           </motion.div>

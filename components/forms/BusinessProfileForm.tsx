@@ -45,10 +45,6 @@ const onboardingSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   country: z.string().optional(),
-  ym_region: z.string().optional(),
-  ym_district: z.string().optional(),
-  ym_zone: z.string().optional(),
-  ym_club: z.string().optional(),
   services: z.string().min(1, "Please enter at least one service."),
   special_offer: z.string().optional(),
 });
@@ -61,13 +57,14 @@ interface BusinessProfileFormProps {
 }
 
 export default function BusinessProfileForm({ mode, initialData }: BusinessProfileFormProps) {
+  const init = (initialData || {}) as Partial<Business & Profile>;
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState<{ [key: string]: boolean }>({});
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [logoUrl, setLogoUrl] = useState((initialData as any)?.logo_url || "");
-  const [brochureUrl, setBrochureUrl] = useState((initialData as any)?.brochure_url || "");
-  const [primaryImageUrl, setPrimaryImageUrl] = useState((initialData as any)?.primary_image_url || "");
+  const [logoUrl, setLogoUrl] = useState(init.logo_url || "");
+  const [brochureUrl, setBrochureUrl] = useState(init.brochure_url || "");
+  const [primaryImageUrl, setPrimaryImageUrl] = useState(init.primary_image_url || "");
 
   const supabase = createClient();
 
@@ -78,23 +75,19 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
   } = useForm<BusinessFormValues>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
-      brand_name: (initialData as any)?.brand_name || "",
-      category: (initialData as any)?.category || "",
-      tagline: (initialData as any)?.tagline || "",
-      description: (initialData as any)?.description || "",
-      contact_email: (initialData as any)?.contact_email || (initialData as any)?.email || "",
-      contact_phone: (initialData as any)?.contact_phone || (initialData as any)?.owner_phone || (initialData as any)?.phone || "",
-      website_url: (initialData as any)?.website_url || "",
-      address: (initialData as any)?.address || "",
-      city: (initialData as any)?.city || "",
-      state: (initialData as any)?.state || "",
-      country: (initialData as any)?.country || (mode === 'create' ? "India" : ""),
-      ym_region: (initialData as any)?.ym_region || "",
-      ym_district: (initialData as any)?.ym_district || "",
-      ym_zone: (initialData as any)?.ym_zone || "",
-      ym_club: (initialData as any)?.ym_club || "",
-      services: (initialData as any)?.services ? (initialData as any).services.join(', ') : "",
-      special_offer: (initialData as any)?.special_offer || "",
+      brand_name: init.brand_name || "",
+      category: init.category || "",
+      tagline: init.tagline || "",
+      description: init.description || "",
+      contact_email: init.contact_email || init.email || "",
+      contact_phone: init.contact_phone || init.phone || "",
+      website_url: init.website_url || "",
+      address: init.address || "",
+      city: init.city || "",
+      state: init.state || "",
+      country: init.country || (mode === 'create' ? "India" : ""),
+      services: init.services ? init.services.join(', ') : "",
+      special_offer: init.special_offer || "",
     },
   });
 
@@ -131,9 +124,10 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
       if (field === "brochure_url") setBrochureUrl(publicUrl);
       if (field === "primary_image_url") setPrimaryImageUrl(publicUrl);
       
-    } catch (error: any) {
+    } catch (error) {
       console.error("Upload failed", error);
-      alert(`Upload failed: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : "An unexpected error occurred.";
+      alert(`Upload failed: ${errMsg}`);
     } finally {
       setIsUploading(prev => ({ ...prev, [field]: false }));
     }
@@ -150,18 +144,13 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
         throw new Error(`You must be logged in to ${mode === 'create' ? 'create' : 'update'} a business.`);
       }
 
-      const ownerName = user.user_metadata?.full_name || user.email?.split('@')[0] || "Unknown User";
-
       // Convert comma-separated services to array
       const servicesArray = data.services
         .split(',')
         .map(s => s.trim())
         .filter(s => s.length > 0);
 
-      const payload = {
-        owner_id: user.id,
-        owner_email: user.email || null,
-        owner_name: ownerName,
+      const cleanPayload = {
         brand_name: data.brand_name,
         category: data.category,
         tagline: data.tagline || null,
@@ -173,28 +162,21 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
         city: data.city || null,
         state: data.state || null,
         country: data.country || null,
-        ym_region: data.ym_region || null,
-        ym_district: data.ym_district || null,
-        ym_zone: data.ym_zone || null,
-        ym_club: data.ym_club || null,
+        ym_designation: init.ym_designation || null,
         services: servicesArray,
         special_offer: data.special_offer || null,
         logo_url: logoUrl || null,
         brochure_url: brochureUrl || null,
         primary_image_url: primaryImageUrl || null,
-        owner_phone: (initialData as any)?.owner_phone || null,
-        gallery_urls: (initialData as any)?.gallery_urls || null,
-        sponsorship_tier: (initialData as any)?.sponsorship_tier || null,
-        ym_designation: (initialData as any)?.ym_designation || null,
-        imis_id: (initialData as any)?.imis_id || null,
+        gallery_urls: init.gallery_urls || null,
       };
 
       if (mode === 'create') {
-        const result = await addBusiness(payload);
+        const result = await addBusiness(cleanPayload);
         if (!result.success) throw new Error(result.error || "Failed to create profile.");
       } else {
         if (!initialData?.id) throw new Error("Missing business ID for update.");
-        const result = await updateBusiness(initialData.id, payload);
+        const result = await updateBusiness(initialData.id, cleanPayload);
         if (result.error) throw new Error(result.error);
       }
 
@@ -204,9 +186,10 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
         router.push('/dashboard');
       }, 1500);
 
-    } catch (error: any) {
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : "Failed to create business profile.";
       console.error(error);
-      setStatus({ type: "error", message: error.message || "Failed to create business profile." });
+      setStatus({ type: "error", message: errMsg });
       setIsSubmitting(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -220,7 +203,7 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
             <Briefcase className="w-8 h-8 text-blue-700" />
           </div>
           <h1 className="text-3xl md:text-4xl font-black text-blue-950 mb-3">{mode === 'create' ? 'Create' : 'Edit'} Your Business Profile</h1>
-          <p className="text-slate-600 text-lg">{mode === 'create' ? 'Set up' : 'Update'} your presence in the Y's Men's International Business Directory</p>
+          <p className="text-slate-600 text-lg">{mode === 'create' ? 'Set up' : 'Update'} your presence in the {"Y's Men's"} International Business Directory</p>
         </div>
 
         <AnimatePresence>
@@ -341,6 +324,9 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
                   rows={2}
                   className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  The business address entered here will be publicly visible in the directory. Do not enter a private residential address unless you want it displayed publicly. You may publish only your City and State instead of a full street address if preferred.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -370,36 +356,10 @@ export default function BusinessProfileForm({ mode, initialData }: BusinessProfi
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-blue-950">Y's Men's International Region</label>
-                <input 
-                  {...register("ym_region")}
-                  className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-blue-950">Y's Men's International District</label>
-                <input 
-                  {...register("ym_district")}
-                  className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-blue-950">Y's Men's International Zone</label>
-                <input 
-                  {...register("ym_zone")}
-                  className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-blue-950">Y's Men's International Club</label>
-                <input 
-                  {...register("ym_club")}
-                  className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900"
-                />
+              <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/70 p-4">
+                <p className="text-xs font-black uppercase tracking-wider text-blue-600">Club affiliation</p>
+                <p className="mt-1 text-sm font-bold text-blue-950">{init.ym_club || init.club || "Derived from your approved member profile"}</p>
+                <p className="mt-1 text-xs text-blue-700">District, zone, and SWIR region are assigned automatically and cannot be entered here.</p>
               </div>
             </div>
           </section>

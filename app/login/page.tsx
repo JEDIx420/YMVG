@@ -1,302 +1,161 @@
 "use client";
 
 import { useState } from "react";
-import { sendAccessRequest } from "@/app/actions/accessRequest";
+import Link from "next/link";
+import { AlertCircle, CheckCircle2, ExternalLink, Loader2, ShieldCheck, UserPlus } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Loader2, AlertCircle, UserPlus, CheckCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
+
+const YSMEN_ENROLL_URL = process.env.NEXT_PUBLIC_YSMEN_ENROLL_URL || "https://www.ysmen.org/join-us/";
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
+  const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<"login" | "enroll" | "success">("login");
-  const [enrollLoading, setEnrollLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [isMagicLinkLoading, setIsMagicLinkLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
   const supabase = createClient();
-  const router = useRouter();
+
+  const callbackUrl = () => `${window.location.origin}/auth/callback?next=/dashboard`;
 
   const handleGoogleSignIn = async () => {
-    setLoading(true);
+    setOauthLoading(true);
     setError(null);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      console.error("Google Sign-in Error:", err);
-      setError(err.message || "Failed to initiate Google Sign-in.");
-      setLoading(false);
+    const { error: signInError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: callbackUrl() },
+    });
+
+    if (signInError) {
+      console.error("Google sign-in failed:", signInError);
+      setError("Sign-in could not be started. Please try again.");
+      setOauthLoading(false);
     }
   };
 
-  const handleMagicLinkLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setIsMagicLinkLoading(true);
-    setMessage('');
+  const handleMagicLinkLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return;
+
+    setMagicLinkLoading(true);
+    setMessage(null);
     setError(null);
+    const { error: signInError } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: { emailRedirectTo: callbackUrl() },
+    });
 
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
-        },
-      });
-
-      if (error) {
-        setMessage(`Error: ${error.message}`);
-      } else {
-        setMessage('Check your email for the secure login link.');
-      }
-    } catch (err: any) {
-      console.error("Magic Link Execution Error:", err);
-      setMessage('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsMagicLinkLoading(false);
+    if (signInError) {
+      console.error("Magic-link sign-in failed:", signInError);
+      setError("A secure login link could not be sent. Confirm your approved email and try again.");
+    } else {
+      setMessage("Check your email for the secure login link.");
     }
+    setMagicLinkLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-slate-100 p-8 overflow-hidden relative">
-        <div className="text-center mb-8 relative z-10">
-          {view === "login" && (
-            <>
-              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <ShieldCheck className="w-8 h-8 text-blue-600" />
+    <main className="min-h-screen bg-[radial-gradient(circle_at_15%_10%,_#dbeafe_0,_transparent_32%),linear-gradient(145deg,_#f8fafc,_#fff7ed)] px-4 py-10 sm:py-16">
+      <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-slate-950/10 lg:grid-cols-[0.9fr_1.1fr]">
+        <section className="relative overflow-hidden bg-blue-950 p-8 text-white sm:p-12">
+          <div className="absolute inset-0 opacity-15 [background-image:radial-gradient(#ffffff_1px,transparent_1px)] [background-size:18px_18px]" />
+          <div className="relative flex h-full flex-col justify-between gap-12">
+            <div>
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
+                <ShieldCheck className="h-7 w-7" />
               </div>
-              <h1 className="text-3xl font-black text-blue-950 tracking-tight leading-tight mb-2">
-                Y's Men Directory Login
-              </h1>
-              <p className="text-slate-600 font-light">
-                Sign in with your registered email or Google account to access the directory dashboard.
-              </p>
-            </>
-          )}
-          {view === "enroll" && (
-            <>
-              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <UserPlus className="w-8 h-8 text-blue-600" />
-              </div>
-              <h1 className="text-3xl font-black text-blue-950 tracking-tight leading-tight mb-2">
-                Enroll as a Y's Men
-              </h1>
-              <p className="text-slate-600 font-light">
-                Submit an application to gain verified member access to our network.
-              </p>
-            </>
-          )}
-          {view === "success" && (
-            <>
-              <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="w-8 h-8 text-emerald-600" />
-              </div>
-              <h1 className="text-3xl font-black text-emerald-900 tracking-tight leading-tight mb-2">
-                Application Received
-              </h1>
-              <p className="text-slate-600 font-light">
-                Our leadership will get back to you shortly regarding your access request.
-              </p>
-            </>
-          )}
-        </div>
+              <p className="mt-8 text-xs font-black uppercase tracking-[0.25em] text-red-400">YMBD member access</p>
+              <h1 className="mt-3 text-4xl font-black tracking-tight">One directory. Verified members.</h1>
+              <p className="mt-5 max-w-md text-sm leading-7 text-blue-100/75">Sign in with the email attached to your existing profile or approved registration request.</p>
+            </div>
 
-        <AnimatePresence mode="wait">
-          {view === "login" && (
-            <motion.div
-              key="login-view"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="space-y-6 relative z-10"
+            <div className="space-y-3 border-t border-white/10 pt-6 text-sm text-blue-100/80">
+              <p>New to YMBD? Submit an account request for reviewer approval.</p>
+              <Link href="/signup" className="inline-flex items-center gap-2 font-bold text-white hover:text-red-300">
+                Apply for an account <UserPlus className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="p-6 sm:p-10 lg:p-12">
+          <div className="mb-8">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-red-600">Login</p>
+            <h2 className="mt-2 text-3xl font-black text-blue-950">Welcome back</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Use your approved email address with either supported login method.</p>
+          </div>
+
+          {error && (
+            <div className="mb-5 flex gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-medium text-rose-700">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
+            </div>
+          )}
+          {message && (
+            <div className="mb-5 flex gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> {message}
+            </div>
+          )}
+
+          <form onSubmit={handleMagicLinkLogin} className="space-y-4">
+            <div>
+              <label htmlFor="login-email" className="mb-2 block text-sm font-bold text-blue-950">Email address</label>
+              <input
+                id="login-email"
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@example.com"
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={magicLinkLoading || !email.trim()}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/15 transition hover:bg-blue-700 disabled:opacity-50"
             >
-              {error && (
-                <div className="p-3 bg-red-50 text-red-700 text-sm font-medium rounded-xl border border-red-100 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  {error}
-                </div>
-              )}
+              {magicLinkLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Send secure login link
+            </button>
+          </form>
 
-              {message && (
-                <div className={`p-4 text-sm font-medium rounded-2xl border flex items-start text-left gap-3 ${
-                  message.startsWith('Error') 
-                    ? 'bg-red-50/80 text-red-800 border-red-200' 
-                    : 'bg-emerald-50/80 text-emerald-800 border-emerald-200'
-                }`}>
-                  <div className="mt-0.5 shrink-0">
-                    {message.startsWith('Error') ? <AlertCircle className="w-5 h-5 text-red-600" /> : <CheckCircle className="w-5 h-5 text-emerald-600" />}
-                  </div>
-                  <p className="leading-relaxed">
-                    {message.replace(/^Error:\s*/, '')}
-                  </p>
-                </div>
-              )}
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">or</span>
+            <div className="h-px flex-1 bg-slate-200" />
+          </div>
 
-              <form onSubmit={handleMagicLinkLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-blue-950 block">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email address"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all text-blue-950 font-medium"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={isMagicLinkLoading || !email.trim()}
-                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50 flex justify-center items-center gap-2"
-                >
-                  {isMagicLinkLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Sending Link...
-                    </>
-                  ) : (
-                    'Send Magic Link'
-                  )}
-                </button>
-              </form>
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={oauthLoading}
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+          >
+            {oauthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleMark />}
+            Sign in with Google
+          </button>
 
-              <div className="flex items-center gap-4">
-                <div className="h-px bg-slate-200 flex-1"></div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">OR</span>
-                <div className="h-px bg-slate-200 flex-1"></div>
-              </div>
-
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                  className={`w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold py-3.5 px-6 rounded-xl shadow-sm transition-all flex items-center justify-center gap-3 active:scale-95 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
-                      Redirecting...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" viewBox="0 0 24 24">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                      </svg>
-                      Sign In with Google
-                    </>
-                  )}
-                </button>
-
-                <a
-                  href="https://www.ysmen.org/join-us/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl font-bold transition-all shadow-sm active:scale-95 flex justify-center items-center gap-2 text-center"
-                >
-                  Enroll as a Y's Men
-                </a>
-              </div>
-            </motion.div>
-          )}
-
-          {view === "enroll" && (
-            <motion.form 
-              key="enroll-form"
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setEnrollLoading(true);
-                setError(null);
-                const formData = new FormData(e.currentTarget as HTMLFormElement);
-                const res = await sendAccessRequest(formData);
-                if (res.success) {
-                  setView("success");
-                } else {
-                  setError(res.error || "Failed to submit.");
-                }
-                setEnrollLoading(false);
-              }}
-              className="space-y-4 relative z-10 w-full"
-            >
-              {error && (
-                <div className="p-3 bg-red-50 text-red-700 text-sm font-medium rounded-xl border border-red-100 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  {error}
-                </div>
-              )}
-              
-              <div className="space-y-1.5">
-                <label className="text-sm font-bold text-blue-950 block">Full Name</label>
-                <input required name="name" type="text" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all text-sm text-slate-900 font-medium" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-bold text-blue-950 block">Email Address</label>
-                <input required name="email" type="email" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all text-sm text-slate-900 font-medium" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-bold text-blue-950 block">Phone Number</label>
-                <input required name="phone" type="tel" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all text-sm text-slate-900 font-medium" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-bold text-blue-950 block">Location / Address</label>
-                <input required name="location" type="text" placeholder="e.g. City, State, or Country" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all text-sm text-slate-900 font-medium" />
-              </div>
-
-              <button
-                type="submit"
-                disabled={enrollLoading}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg active:scale-95 disabled:opacity-50 flex justify-center items-center mt-6"
-              >
-                {enrollLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Application"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setError(null); setMessage(''); setView("login"); }}
-                className="w-full py-3 text-slate-500 hover:text-slate-800 text-sm font-semibold transition-all mt-1"
-              >
-                Back to Login
-              </button>
-            </motion.form>
-          )}
-
-          {view === "success" && (
-            <motion.div
-              key="success-screen"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="relative z-10 flex flex-col items-center pt-4 w-full"
-            >
-              <button
-                onClick={() => router.push('/')}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg active:scale-95"
-              >
-                Return to Homescreen
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Decorative background element */}
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-50 rounded-full blur-3xl opacity-50 z-0"></div>
+          <div className="mt-8 grid gap-3 border-t border-slate-100 pt-6 sm:grid-cols-2">
+            <Link href="/signup" className="flex items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-100">
+              <UserPlus className="h-4 w-4" /> Apply for an account
+            </Link>
+            <a href={YSMEN_ENROLL_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200">
+              Enroll as a Y&apos;s Man <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
+  );
+}
+
+function GoogleMark() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09A6.9 6.9 0 0 1 5.49 12c0-.73.13-1.43.35-2.09V7.07H2.18A11 11 0 0 0 1 12c0 1.78.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </svg>
   );
 }

@@ -1,0 +1,19 @@
+-- MANUAL CLEANUP: Revoke Legacy YMBD Vector Search Functions
+--
+-- INSTRUCTIONS FOR DEPLOYMENT OWNER:
+-- 1. Connect to your production database or use the Supabase SQL Editor.
+-- 2. Inspect the existing functions and their exact signatures for 'match_businesses' and 'hybrid_search_businesses'.
+--    You can run this query to find exact signatures:
+--    SELECT oid::regprocedure FROM pg_proc WHERE proname IN ('match_businesses', 'hybrid_search_businesses');
+-- 3. Replace the placeholder signatures below with the exact results from step 2.
+-- 4. Execute this script to revoke execution privileges from public roles.
+--
+-- IMPORTANT: Do not drop these functions. This template only revokes execution
+-- after the exact production signatures have been verified. Do not touch
+-- 'match_properties' or any unrelated vector functions.
+
+-- EXAMPLE REVOCATION SCRIPTS (DO NOT RUN BLINDLY — UPDATE SIGNATURES FIRST):
+--
+-- REVOKE EXECUTE ON FUNCTION public.match_businesses(<EXACT_SIGNATURE_HERE>) FROM PUBLIC, anon, authenticated;
+-- REVOKE EXECUTE ON FUNCTION public.hybrid_search_businesses(<EXACT_SIGNATURE_HERE>) FROM PUBLIC, anon, authenticated;
+--

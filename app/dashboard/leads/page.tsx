@@ -25,7 +25,7 @@ export default async function LeadsPage() {
 
   // Security gate: ONLY admins or business owners can access Lead Center
   const isOwner = profile.app_role === "business_owner";
-  const isAdmin = profile.app_role === "super_admin" || profile.app_role === "region_admin";
+  const isAdmin = profile.app_role === "super_admin" || profile.app_role === "review_admin";
 
   if (!isOwner && !isAdmin) {
     redirect("/dashboard");
@@ -41,21 +41,62 @@ export default async function LeadsPage() {
     console.error("Error fetching businesses:", bizError);
   }
 
-  let leads: any[] = [];
-  let businessMap: { [id: string]: string } = {};
+  interface LeadItem {
+    id: string;
+    business_id: string;
+    sender_name: string;
+    sender_email: string;
+    sender_phone: string;
+    message: string;
+    created_at: string;
+  }
 
-  if (ownerBusinesses && ownerBusinesses.length > 0) {
+  let leads: LeadItem[] = [];
+  const businessMap: { [id: string]: string } = {};
+
+  // Initialize admin client to bypass RLS and read leads
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  if (isAdmin) {
+    // 1. Resolve brand names for all businesses to map in Lead inbox
+    const { data: allBiz } = await supabaseAdmin
+      .from("businesses")
+      .select("id, brand_name");
+    
+    if (allBiz) {
+      allBiz.forEach(b => {
+        businessMap[b.id] = b.brand_name;
+      });
+    }
+
+    // 2. Fetch all leads system-wide for admin audits
+    const { data: leadsData, error: leadsError } = await supabaseAdmin
+      .from("leads")
+      .select(`
+        id,
+        business_id,
+        sender_name,
+        sender_email,
+        sender_phone,
+        message,
+        created_at
+      `)
+      .order("created_at", { ascending: false });
+
+    if (leadsError) {
+      console.error("Error fetching leads for admin:", leadsError);
+    } else if (leadsData) {
+      leads = leadsData;
+    }
+  } else if (ownerBusinesses && ownerBusinesses.length > 0) {
     ownerBusinesses.forEach(b => {
       businessMap[b.id] = b.brand_name;
     });
 
     const businessIds = ownerBusinesses.map(b => b.id);
-
-    // Initialize admin client to bypass RLS and read all leads scoped to the owner's businesses
-    const supabaseAdmin = createAdminClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
 
     const { data: leadsData, error: leadsError } = await supabaseAdmin
       .from("leads")

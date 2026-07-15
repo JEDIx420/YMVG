@@ -9,8 +9,8 @@ export default async function DirectoryPage() {
   
   // Fetch initial data on the server for web crawlers (SEO)
   const { data: businesses, error } = await supabase
-    .from('businesses')
-    .select('id, owner_id, brand_name, category, description, services, special_offer, address, city, tagline, website_url, logo_url, primary_image_url, gallery_urls, sponsorship_tier, ym_region, ym_club, ym_designation')
+    .from('public_businesses')
+    .select('id, brand_name, category, description, services, special_offer, address, city, tagline, website_url, logo_url, primary_image_url, gallery_urls, sponsorship_tier, ym_region, ym_club, ym_designation')
     .limit(100);
 
   if (error) {

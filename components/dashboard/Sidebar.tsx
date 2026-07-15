@@ -19,8 +19,6 @@ import {
   X,
   Zap,
   BarChart3,
-  Home,
-  Globe,
   LayoutDashboard
 } from "lucide-react";
 import { Profile } from "@/types/database.types";
@@ -38,6 +36,7 @@ export default function Sidebar({ profile }: SidebarProps) {
   const supabase = createClient();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -51,13 +50,22 @@ export default function Sidebar({ profile }: SidebarProps) {
   const getNavLinks = () => {
     let roleLinks = [];
     const isOwnerView = searchParams.get("view") === "owner";
-    const activeRole = (isOwnerView && (profile.app_role === "super_admin" || profile.app_role === "region_admin"))
+    const activeRole = (isOwnerView && (profile.app_role === "super_admin" || profile.app_role === "review_admin"))
       ? "business_owner"
       : profile.app_role;
 
     switch (activeRole) {
       case "super_admin":
-      case "region_admin":
+        roleLinks = [
+          { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+          { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+          { name: "User Audit", href: "/dashboard/users", icon: Users },
+          { name: "Regions Directory", href: "/dashboard/regions", icon: MapPin },
+          { name: "Business Directory", href: "/dashboard/businesses", icon: Briefcase },
+          { name: "Ad Campaigns", href: "/dashboard/campaigns", icon: Sparkles },
+        ];
+        break;
+      case "review_admin":
         roleLinks = [
           { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
           { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
@@ -84,13 +92,13 @@ export default function Sidebar({ profile }: SidebarProps) {
           { name: "Register Business", href: "/dashboard/onboarding", icon: Plus },
         ];
         break;
-    }
+      }
 
     // Add My Profile unconditionally to all roles
     roleLinks.push({ name: "My Profile", href: "/dashboard/profile", icon: User });
     
     // Append ?view=owner if impersonating
-    if (isOwnerView && (profile.app_role === "super_admin" || profile.app_role === "region_admin")) {
+    if (isOwnerView && (profile.app_role === "super_admin" || profile.app_role === "review_admin")) {
       return roleLinks.map(link => ({
         ...link,
         href: `${link.href}?view=owner`
@@ -118,7 +126,7 @@ export default function Sidebar({ profile }: SidebarProps) {
             />
           </div>
           <div className="flex flex-col leading-none">
-            <span className="text-sm font-black tracking-tighter text-blue-950 uppercase">Y's Men</span>
+            <span className="text-sm font-black tracking-tighter text-blue-950 uppercase">Y&apos;s Men</span>
             <span className="text-[9px] font-bold text-red-600 tracking-widest uppercase mt-0.5">SWIR</span>
           </div>
         </Link>
@@ -159,7 +167,7 @@ export default function Sidebar({ profile }: SidebarProps) {
               />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-lg font-black tracking-tighter text-blue-950 uppercase">Y's Men</span>
+              <span className="text-lg font-black tracking-tighter text-blue-950 uppercase">Y&apos;s Men</span>
               <span className="text-[10px] font-bold text-red-600 tracking-widest uppercase mt-0.5">SWIR</span>
             </div>
           </Link>
@@ -210,7 +218,7 @@ export default function Sidebar({ profile }: SidebarProps) {
                 {profile.full_name || "Nexus User"}
               </h4>
               <span className="text-[10px] font-black text-red-600 uppercase tracking-wider block mt-0.5">
-                {searchParams.get("view") === "owner" && (profile.app_role === "super_admin" || profile.app_role === "region_admin")
+                {searchParams.get("view") === "owner" && (profile.app_role === "super_admin" || profile.app_role === "review_admin")
                   ? "business owner (impersonated)"
                   : profile.app_role.replace("_", " ")}
               </span>

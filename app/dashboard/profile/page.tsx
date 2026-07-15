@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/app/actions/profiles";
 import { createClient } from "@/utils/supabase/server";
 import PersonalProfileForm from "@/components/forms/PersonalProfileForm";
 import { User } from "lucide-react";
+import type { SwirClub } from "@/types/database.types";
 
 export const metadata = {
   title: "My Profile - Business Directory Dashboard",
@@ -18,10 +19,15 @@ export default async function ProfileDashboardPage() {
 
   // Fetch linked enterprises from public.businesses where owner_profile_id = profile.id or owner_email = profile.email
   const supabase = await createClient();
-  const { data: linkedBusinesses, error } = await supabase
-    .from("businesses")
-    .select("id, brand_name, category, logo_url, sponsorship_tier")
-    .or(`owner_profile_id.eq.${profile.id},owner_email.eq.${profile.email}`);
+  const [businessesResult, clubsResult] = await Promise.all([
+    supabase
+      .from("businesses")
+      .select("id, brand_name, category, logo_url, sponsorship_tier")
+      .or(`owner_profile_id.eq.${profile.id},owner_email.eq.${profile.email}`),
+    supabase.rpc("list_selectable_swir_clubs"),
+  ]);
+
+  const { data: linkedBusinesses, error } = businessesResult;
 
   if (error) {
     console.error("Error fetching linked businesses:", error);
@@ -48,7 +54,11 @@ export default async function ProfileDashboardPage() {
       </div>
 
       {/* Profile Form Card */}
-      <PersonalProfileForm profile={profile} linkedBusinesses={businesses} />
+      <PersonalProfileForm
+        profile={profile}
+        clubs={(clubsResult.data || []) as SwirClub[]}
+        linkedBusinesses={businesses}
+      />
     </div>
   );
 }

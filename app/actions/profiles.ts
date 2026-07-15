@@ -8,17 +8,17 @@ import { withAuthAction } from "@/utils/supabase/db-helper";
 const profileUpdateSchema = z.object({
   full_name: z.string().min(2, "Full name must be at least 2 characters."),
   phone: z.string().min(5, "Please enter a valid phone number."),
-  club: z.string().min(2, "Please select or enter your Y's Men Club affiliation."),
-});
+}).strict();
 
 export type Profile = {
   id: string;
   user_id: string | null;
+  club_id?: string | null;
   full_name: string | null;
   email: string;
   phone: string | null;
   club: string | null;
-  app_role: 'super_admin' | 'region_admin' | 'business_owner' | 'member';
+  app_role: 'super_admin' | 'review_admin' | 'business_owner' | 'member';
   created_at: string;
   imis_id?: string | null;
   ym_region?: string | null;
@@ -31,6 +31,7 @@ export type Profile = {
   country?: string | null;
   education?: string | null;
   job_title?: string | null;
+  account_approved_at?: string | null;
 };
 
 /**
@@ -59,7 +60,6 @@ export async function getCurrentProfile(): Promise<Profile | null> {
 export async function updateProfile(formData: {
   full_name: string;
   phone: string;
-  club: string;
 }): Promise<{ success: boolean; error?: string }> {
   return withAuthAction(async (supabase, user) => {
     try {
@@ -71,8 +71,6 @@ export async function updateProfile(formData: {
         .update({
           full_name: validated.full_name,
           phone: validated.phone,
-          club: validated.club,
-          ym_club: validated.club, // Sync both columns
         })
         .eq("user_id", user.id);
 
@@ -83,7 +81,7 @@ export async function updateProfile(formData: {
 
       revalidatePath("/dashboard");
       return { success: true };
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof z.ZodError) {
         return { success: false, error: err.issues[0].message };
       }
@@ -96,31 +94,10 @@ export async function updateProfile(formData: {
  * Upgrades a standard 'member' role to 'business_owner' upon successful creation/claiming of a business.
  */
 export async function upgradeProfileToBusinessOwner(): Promise<{ success: boolean; error?: string }> {
-  return withAuthAction(async (supabase, user) => {
-    // 1. Fetch current role to make sure we don't downgrade super_admin or region_admin
-    const { data: profile, error: fetchError } = await supabase
-      .from("profiles")
-      .select("app_role")
-      .eq("user_id", user.id)
-      .single();
-
-    if (fetchError || !profile) {
-      return { success: false, error: "Profile not found." };
-    }
-
-    // Protect administrative roles from accidental modifications
-    if (profile.app_role === "super_admin" || profile.app_role === "region_admin") {
-      return { success: true }; // Keep higher permissions intact
-    }
-
-    // 2. Perform role escalation
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ app_role: "business_owner" })
-      .eq("user_id", user.id);
-
-    if (updateError) {
-      console.error("Error upgrading user to business_owner:", updateError);
+  return withAuthAction(async (supabase) => {
+    const { error } = await supabase.rpc("promote_to_business_owner");
+    if (error) {
+      console.error("Error promoting user to business_owner:", error);
       return { success: false, error: "Failed to elevate user permissions." };
     }
 
@@ -133,18 +110,13 @@ const personalProfileUpdateSchema = z.object({
   full_name: z.string().min(2, "Full name must be at least 2 characters."),
   phone: z.string().min(5, "Please enter a valid phone number."),
   imis_id: z.string().nullable().optional(),
-  ym_region: z.string().nullable().optional(),
-  ym_district: z.string().nullable().optional(),
-  ym_zone: z.string().nullable().optional(),
-  ym_club: z.string().nullable().optional(),
-  club: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
   state: z.string().nullable().optional(),
   country: z.string().nullable().optional(),
   education: z.string().nullable().optional(),
   job_title: z.string().nullable().optional(),
-});
+}).strict();
 
 /**
  * Updates the user's personal profile details.
@@ -156,11 +128,6 @@ export async function updatePersonalProfile(formData: FormData): Promise<{ succe
       const rawFullName = formData.get("full_name");
       const rawPhone = formData.get("phone");
       const rawImisId = formData.get("imis_id");
-      const rawYmRegion = formData.get("ym_region");
-      const rawYmDistrict = formData.get("ym_district");
-      const rawYmZone = formData.get("ym_zone");
-      const rawYmClub = formData.get("ym_club");
-      const rawClub = formData.get("club");
       const rawAddress = formData.get("address");
       const rawCity = formData.get("city");
       const rawState = formData.get("state");
@@ -178,11 +145,6 @@ export async function updatePersonalProfile(formData: FormData): Promise<{ succe
       const full_name = typeof rawFullName === "string" ? rawFullName.trim() : "";
       const phone = typeof rawPhone === "string" ? rawPhone.trim() : "";
       const imis_id = sanitizeString(rawImisId);
-      const ym_region = sanitizeString(rawYmRegion);
-      const ym_district = sanitizeString(rawYmDistrict);
-      const ym_zone = sanitizeString(rawYmZone);
-      const ym_club = sanitizeString(rawYmClub);
-      const club = sanitizeString(rawClub);
       const address = sanitizeString(rawAddress);
       const city = sanitizeString(rawCity);
       const state = sanitizeString(rawState);
@@ -195,11 +157,6 @@ export async function updatePersonalProfile(formData: FormData): Promise<{ succe
         full_name,
         phone,
         imis_id,
-        ym_region,
-        ym_district,
-        ym_zone,
-        ym_club,
-        club,
         address,
         city,
         state,
@@ -208,20 +165,12 @@ export async function updatePersonalProfile(formData: FormData): Promise<{ succe
         job_title,
       });
 
-      const incomingClub = validated.ym_club?.trim() || validated.club?.trim() || null;
-
       const { error } = await supabase
         .from("profiles")
         .update({
           full_name: validated.full_name,
           phone: validated.phone,
           imis_id: validated.imis_id || null,
-          ym_region: validated.ym_region || null,
-          region: validated.ym_region || null, // Sync both columns
-          ym_district: validated.ym_district || null,
-          ym_zone: validated.ym_zone || null,
-          ym_club: incomingClub,
-          club: incomingClub,
           address: validated.address || null,
           city: validated.city || null,
           state: validated.state || null,
@@ -242,12 +191,45 @@ export async function updatePersonalProfile(formData: FormData): Promise<{ succe
       revalidatePath("/dashboard/profile");
       revalidatePath("/dashboard");
       return { success: true };
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof z.ZodError) {
         return { success: false, error: err.issues[0].message };
       }
-      return { success: false, error: err.message || "An unexpected error occurred." };
+      const errMsg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      return { success: false, error: errMsg };
     }
   }, { success: false, error: "Authentication failed. Please log in again." });
 }
 
+const assignRoleSchema = z.object({
+  targetProfileId: z.string().uuid("Invalid target profile ID."),
+  newRole: z.enum(["member", "business_owner", "review_admin", "super_admin"]),
+}).strict();
+
+export async function assignUserRole(rawPayload: unknown): Promise<{ success: boolean; error?: string }> {
+  return withAuthAction(async (supabase) => {
+    try {
+      const validated = assignRoleSchema.parse(rawPayload);
+
+      // Invoke database RPC assign_user_role (verifies super_admin server-side)
+      const { error } = await supabase.rpc("assign_user_role", {
+        target_profile_id: validated.targetProfileId,
+        requested_role: validated.newRole
+      });
+
+      if (error) {
+        console.error("Error setting user role via RPC:", error);
+        return { success: false, error: error.message };
+      }
+
+      revalidatePath("/dashboard/users");
+      return { success: true };
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return { success: false, error: err.issues[0].message };
+      }
+      const errMsg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      return { success: false, error: errMsg };
+    }
+  }, { success: false, error: "Authentication failed." });
+}

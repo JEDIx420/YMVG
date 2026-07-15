@@ -2,62 +2,93 @@
 
 import { revalidatePath } from "next/cache";
 import { withAuthAction } from "@/utils/supabase/db-helper";
+import { z } from "zod";
 
-export async function updateBusiness(businessId: string, formData: any) {
+// Strict validation schema rejecting unknown fields
+const businessUpdateSchema = z.object({
+  brand_name: z.string().min(2, "Brand name is required").max(100),
+  category: z.string().min(2, "Category is required").max(50),
+  description: z.string().min(10, "Description must be at least 10 characters").max(2000),
+  services: z.array(z.string().max(50)).nullable().optional(),
+  special_offer: z.string().max(500).nullable().optional(),
+  address: z.string().max(300).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  state: z.string().max(100).nullable().optional(),
+  country: z.string().max(100).nullable().optional(),
+  contact_phone: z.string().max(30).nullable().optional(),
+  contact_email: z.string().email("Invalid email format").or(z.literal("")).nullable().optional(),
+  website_url: z.string().url("Invalid website URL format").or(z.literal("")).nullable().optional(),
+  logo_url: z.string().url("Invalid logo URL format").or(z.literal("")).nullable().optional(),
+  primary_image_url: z.string().url("Invalid primary image URL format").or(z.literal("")).nullable().optional(),
+  gallery_urls: z.array(z.string().url("Invalid gallery image URL")).nullable().optional(),
+  brochure_url: z.string().url("Invalid brochure URL format").or(z.literal("")).nullable().optional(),
+  tagline: z.string().max(150).nullable().optional(),
+  ym_designation: z.string().max(100).nullable().optional(),
+}).strict();
+
+export async function updateBusiness(businessId: string, rawPayload: unknown) {
   return withAuthAction(async (supabase, user) => {
+    try {
+      // 1. Validate business ID as UUID
+      const validatedId = z.string().uuid("Invalid business ID format.").parse(businessId);
 
-  // 2. Security Check: Verify Ownership
-  const { data: existing, error: fetchError } = await supabase
-    .from("businesses")
-    .select("owner_id")
-    .eq("id", businessId)
-    .single();
+      // 2. Validate payload and reject unknown keys
+      const validated = businessUpdateSchema.parse(rawPayload);
 
-  if (fetchError || !existing) {
-    return { error: "Business profile not found." };
-  }
+      // 3. Fetch the target listing owner details
+      const { data: existing, error: fetchError } = await supabase
+        .from("businesses")
+        .select("owner_id")
+        .eq("id", validatedId)
+        .single();
 
-  if (existing.owner_id !== user.id) {
-    return { error: "Security Violation: You do not have permission to edit this profile." };
-  }
+      if (fetchError || !existing) {
+        return { error: "Business profile not found." };
+      }
 
-  // 3. Perform Update
-  const { error: updateError } = await supabase
-    .from("businesses")
-    .update({
-      brand_name: formData.brand_name,
-      tagline: formData.tagline,
-      description: formData.description,
-      category: formData.category,
-      services: formData.services,
-      special_offer: formData.special_offer,
-      website_url: formData.website_url,
-      contact_phone: formData.contact_phone,
-      contact_email: formData.contact_email,
-      address: formData.address,
-      ym_region: formData.ym_region,
-      ym_district: formData.ym_district,
-      ym_zone: formData.ym_zone,
-      ym_club: formData.ym_club,
-      logo_url: formData.logo_url,
-      brochure_url: formData.brochure_url,
-      primary_image_url: formData.primary_image_url,
-      city: formData.city,
-      state: formData.state,
-      country: formData.country,
-    })
-    .eq("id", businessId);
+      // 4. Resolve user profile role
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("app_role")
+        .eq("user_id", user.id)
+        .single();
 
-  if (updateError) {
-    console.error("Update error:", updateError);
-    return { error: "Failed to update business profile. Please try again." };
-  }
+      if (profileError || !profile) {
+        return { error: "Security check: Profile not found." };
+      }
 
-    // 4. Invalidate cache for directory and spotlight pages
-    revalidatePath("/directory");
-    revalidatePath(`/directory/${businessId}`);
-    revalidatePath("/dashboard");
+      // 5. Authorization Checks
+      // ONLY the owner OR a super_admin can edit the business.
+      // review_admin is read-only for others' businesses.
+      const isOwner = existing.owner_id === user.id;
+      const isSuperAdmin = profile.app_role === "super_admin";
 
-    return { success: true };
+      if (!isOwner && !isSuperAdmin) {
+        return { error: "Security Violation: You do not have permission to edit this profile." };
+      }
+
+      // 6. Execute Update
+      const { error: updateError } = await supabase
+        .from("businesses")
+        .update(validated)
+        .eq("id", validatedId);
+
+      if (updateError) {
+        console.error("Update error:", updateError);
+        return { error: "Failed to update business profile. Please try again." };
+      }
+
+      // 7. Invalidate cache
+      revalidatePath("/directory");
+      revalidatePath(`/directory/${validatedId}`);
+      revalidatePath("/dashboard");
+
+      return { success: true };
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return { error: err.issues[0].message };
+      }
+      return { error: "An unexpected error occurred during the update." };
+    }
   }, { error: "Authentication failed or unexpected error occurred." });
 }

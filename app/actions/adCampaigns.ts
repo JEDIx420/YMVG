@@ -40,10 +40,9 @@ export async function createAdCampaign(formData: {
 }): Promise<{ success: boolean; id?: string; error?: string }> {
   return withAuthAction(async (supabase, user) => {
     try {
-      // 1. Validate form fields
       const validated = campaignSchema.parse(formData);
 
-      // 2. Validate ownership of the business listing
+      // Validate ownership of the business listing
       const { data: business, error: fetchError } = await supabase
         .from("businesses")
         .select("owner_id")
@@ -58,7 +57,7 @@ export async function createAdCampaign(formData: {
         return { success: false, error: "Security Violation: You do not own this business listing." };
       }
 
-      // 3. Insert the new campaign in 'pending' review state
+      // Insert campaign in 'pending' review state
       const { data: campaign, error: insertError } = await supabase
         .from("ad_campaigns")
         .insert({
@@ -80,7 +79,7 @@ export async function createAdCampaign(formData: {
 
       revalidatePath("/dashboard");
       return { success: true, id: campaign.id };
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof z.ZodError) {
         return { success: false, error: err.issues[0].message };
       }
@@ -91,91 +90,120 @@ export async function createAdCampaign(formData: {
 
 /**
  * Approves a pending advertising boost campaign.
- * Restricts operational access to super_admin and region_admin tiers.
+ * Invokes the database moderate_campaign RPC.
  */
 export async function approveCampaign(campaignId: string): Promise<{ success: boolean; error?: string }> {
   return withAuthAction(async (supabase, user) => {
     try {
-      // 1. Verify administrative credentials
       const profile = await getCurrentProfile();
-      if (!profile || (profile.app_role !== "super_admin" && profile.app_role !== "region_admin")) {
-        return { success: false, error: "Security Violation: Administrative access required." };
+      if (!profile || (profile.app_role !== "super_admin" && profile.app_role !== "review_admin")) {
+        return { success: false, error: "Security Violation: Administrative reviewer access required." };
       }
 
-      // 2. Escalate campaign status to 'active'
-      const { error: updateError } = await supabase
-        .from("ad_campaigns")
-        .update({ status: "active" })
-        .eq("id", campaignId);
+      const { data, error } = await supabase.rpc("moderate_campaign", {
+        campaign_id: campaignId,
+        requested_action: "approve"
+      });
 
-      if (updateError) {
-        console.error("Error activating campaign:", updateError);
-        return { success: false, error: "Failed to activate campaign." };
+      if (error) {
+        console.error("Error activating campaign via RPC:", error);
+        return { success: false, error: error.message };
       }
 
-      // 3. Refresh directory page caching instantly to launch boosts
       revalidatePath("/directory");
       revalidatePath("/dashboard");
       
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err.message || "An unexpected error occurred." };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      return { success: false, error: errMsg };
     }
   }, { success: false, error: "Authentication failed." });
 }
 
 /**
- * Pauses or declines a campaign (e.g. reject a pending draft or pause active promos).
+ * Rejects a pending campaign request.
  */
-export async function pauseCampaign(campaignId: string): Promise<{ success: boolean; error?: string }> {
+export async function rejectCampaign(campaignId: string): Promise<{ success: boolean; error?: string }> {
   return withAuthAction(async (supabase, user) => {
     try {
       const profile = await getCurrentProfile();
-      if (!profile) return { success: false, error: "Profile not found." };
+      if (!profile || (profile.app_role !== "super_admin" && profile.app_role !== "review_admin")) {
+        return { success: false, error: "Security Violation: Administrative reviewer access required." };
+      }
 
-      const isAdmin = profile.app_role === "super_admin" || profile.app_role === "region_admin";
+      const { data, error } = await supabase.rpc("moderate_campaign", {
+        campaign_id: campaignId,
+        requested_action: "reject"
+      });
 
-      if (isAdmin) {
-        // Admins can pause any campaign
-        const { error } = await supabase
-          .from("ad_campaigns")
-          .update({ status: "paused" })
-          .eq("id", campaignId);
+      if (error) {
+        console.error("Error rejecting campaign via RPC:", error);
+        return { success: false, error: error.message };
+      }
 
-        if (error) throw error;
-      } else {
-        // Owners can only pause their own business campaigns
-        const { data: campaign, error: fetchError } = await supabase
-          .from("ad_campaigns")
-          .select("business_id")
-          .eq("id", campaignId)
-          .single();
+      revalidatePath("/dashboard");
+      return { success: true };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      return { success: false, error: errMsg };
+    }
+  }, { success: false, error: "Authentication failed." });
+}
 
-        if (fetchError || !campaign) return { success: false, error: "Campaign not found." };
+/**
+ * Pauses an active campaign.
+ */
+export async function pauseCampaign(campaignId: string): Promise<{ success: boolean; error?: string }> {
+  return withAuthAction(async (supabase) => {
+    try {
+      const profile = await getCurrentProfile();
+      if (!profile || (profile.app_role !== "super_admin" && profile.app_role !== "review_admin")) {
+        return { success: false, error: "Security Violation: Administrative reviewer access required." };
+      }
 
-        const { data: business } = await supabase
-          .from("businesses")
-          .select("owner_id")
-          .eq("id", campaign.business_id)
-          .single();
+      const { error } = await supabase.rpc("moderate_campaign", {
+        campaign_id: campaignId,
+        requested_action: "pause"
+      });
+      if (error) throw error;
 
-        if (!business || business.owner_id !== user.id) {
-          return { success: false, error: "Security Violation: Access denied." };
-        }
+      revalidatePath("/directory");
+      revalidatePath("/dashboard");
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: "Failed to pause campaign." };
+    }
+  }, { success: false, error: "Authentication failed." });
+}
 
-        const { error } = await supabase
-          .from("ad_campaigns")
-          .update({ status: "paused" })
-          .eq("id", campaignId);
+/**
+ * Resumes a paused campaign.
+ */
+export async function resumeCampaign(campaignId: string): Promise<{ success: boolean; error?: string }> {
+  return withAuthAction(async (supabase, user) => {
+    try {
+      const profile = await getCurrentProfile();
+      if (!profile || (profile.app_role !== "super_admin" && profile.app_role !== "review_admin")) {
+        return { success: false, error: "Security Violation: Administrative reviewer access required." };
+      }
 
-        if (error) throw error;
+      const { data, error } = await supabase.rpc("moderate_campaign", {
+        campaign_id: campaignId,
+        requested_action: "resume"
+      });
+
+      if (error) {
+        console.error("Error resuming campaign via RPC:", error);
+        return { success: false, error: error.message };
       }
 
       revalidatePath("/directory");
       revalidatePath("/dashboard");
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: "Failed to pause campaign." };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      return { success: false, error: errMsg };
     }
   }, { success: false, error: "Authentication failed." });
 }
@@ -203,9 +231,9 @@ export async function deleteCampaign(campaignId: string): Promise<{ success: boo
       revalidatePath("/directory");
       revalidatePath("/dashboard");
       return { success: true };
-    } catch (err: any) {
-      console.error("deleteCampaign error:", err);
-      return { success: false, error: err.message || "Failed to delete campaign." };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Failed to delete campaign.";
+      return { success: false, error: errMsg };
     }
   }, { success: false, error: "Authentication failed." });
 }

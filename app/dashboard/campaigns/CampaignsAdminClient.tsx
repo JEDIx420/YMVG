@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { approveCampaign, pauseCampaign, deleteCampaign } from "@/app/actions/adCampaigns";
+import { approveCampaign, pauseCampaign, deleteCampaign, rejectCampaign } from "@/app/actions/adCampaigns";
 import { Profile } from "@/types/database.types";
 import {
   ShieldAlert,
@@ -118,11 +118,12 @@ export default function CampaignsAdminClient({
         router.refresh();
         setStatusMessage(null);
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Approval failed.";
       console.error(err);
       setStatusMessage({
         type: "error",
-        text: err.message || "Approval failed.",
+        text: errMsg,
       });
     } finally {
       setActionLoadingId(null);
@@ -153,11 +154,48 @@ export default function CampaignsAdminClient({
         router.refresh();
         setStatusMessage(null);
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Failed to decline campaign.";
       console.error(err);
       setStatusMessage({
         type: "error",
-        text: err.message || "Failed to decline campaign.",
+        text: errMsg,
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    setActionLoadingId(id);
+    setStatusMessage(null);
+
+    try {
+      const res = await rejectCampaign(id);
+      if (!res.success) {
+        throw new Error(res.error || "Failed to reject campaign.");
+      }
+
+      setStatusMessage({
+        type: "success",
+        text: "Campaign request rejected.",
+      });
+
+      // Update local state status
+      setCampaigns((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, status: "rejected" } : c))
+      );
+
+      setTimeout(() => {
+        router.refresh();
+        setStatusMessage(null);
+      }, 1500);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Failed to reject campaign.";
+      console.error(err);
+      setStatusMessage({
+        type: "error",
+        text: errMsg,
       });
     } finally {
       setActionLoadingId(null);
@@ -189,11 +227,12 @@ export default function CampaignsAdminClient({
         router.refresh();
         setStatusMessage(null);
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Failed to delete campaign.";
       console.error(err);
       setStatusMessage({
         type: "error",
-        text: err.message || "Failed to delete campaign.",
+        text: errMsg,
       });
     } finally {
       setActionLoadingId(null);
@@ -226,6 +265,12 @@ export default function CampaignsAdminClient({
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 uppercase tracking-wider">
             Expired
+          </span>
+        );
+      case "rejected":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 text-xs font-bold rounded-lg border border-red-200 uppercase tracking-wider">
+            Rejected
           </span>
         );
       default:
@@ -537,7 +582,7 @@ export default function CampaignsAdminClient({
                     {camp.status === "pending" ? (
                       <>
                         <button
-                          onClick={() => handleDecline(camp.id)}
+                          onClick={() => handleReject(camp.id)}
                           disabled={actionLoadingId === camp.id}
                           className="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
                         >

@@ -21,9 +21,9 @@ export default async function PromotionsPage() {
     redirect("/login");
   }
 
-  // Security gate: ONLY business_owners or admins can access promotions
+  // Security gate: ONLY business_owners or reviewer admins can access promotions
   const isBusinessOwner = profile.app_role === "business_owner";
-  const isAdmin = profile.app_role === "super_admin" || profile.app_role === "region_admin";
+  const isAdmin = profile.app_role === "super_admin" || profile.app_role === "review_admin";
 
   if (!isBusinessOwner && !isAdmin) {
     redirect("/dashboard");

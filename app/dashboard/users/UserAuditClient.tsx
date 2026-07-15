@@ -4,7 +4,6 @@ import React, { useState, useMemo } from "react";
 import { 
   Search, 
   X, 
-  Users, 
   Mail, 
   Phone, 
   MapPin, 
@@ -19,7 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface ProfileItem {
   id: string;
-  user_id: string;
+  user_id: string | null;
   full_name: string | null;
   email: string;
   phone: string | null;
@@ -147,8 +146,8 @@ export default function UserAuditClient({
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
                           p.app_role === "super_admin" 
                             ? "bg-red-50 text-red-700 border-red-100" 
-                            : p.app_role === "region_admin"
-                              ? "bg-amber-50 text-amber-700 border-amber-100"
+                            : p.app_role === "review_admin"
+                              ? "bg-purple-50 text-purple-700 border-purple-100"
                               : p.app_role === "business_owner"
                                 ? "bg-blue-50 text-blue-700 border-blue-100"
                                 : "bg-slate-100 text-slate-600 border-slate-200"
@@ -283,7 +282,7 @@ export default function UserAuditClient({
                   
                   {selectedProfileBusinesses.length === 0 ? (
                     <div className="p-6 bg-slate-50/50 border border-slate-100 rounded-2xl text-center text-xs text-slate-400 italic">
-                      No businesses registered under this member's credentials.
+                      No businesses registered under this member&apos;s credentials.
                     </div>
                   ) : (
                     <div className="space-y-3">

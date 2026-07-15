@@ -27,7 +27,7 @@ export default async function AnalyticsPage(props: { searchParams: Params }) {
   }
 
   const isOwnerView = searchParams.view === "owner" || profile.app_role === "business_owner";
-  const isAdmin = profile.app_role === "super_admin" || profile.app_role === "region_admin";
+  const isAdmin = profile.app_role === "super_admin" || profile.app_role === "review_admin";
 
   // Gate access: must be admin or business owner
   if (!isAdmin && profile.app_role !== "business_owner") {

@@ -21,7 +21,6 @@ import {
   AlertCircle,
   Loader2
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 interface MemberViewProps {
   profile: Profile;
@@ -34,14 +33,12 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState(profile.full_name || "");
   const [phone, setPhone] = useState(profile.phone || "");
-  const [club, setClub] = useState(profile.club || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setFullName(profile.full_name || "");
     setPhone(profile.phone || "");
-    setClub(profile.club || "");
   }, [profile]);
 
   const handleCopyLink = () => {
@@ -61,7 +58,6 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
       const res = await updateProfile({
         full_name: fullName,
         phone: phone,
-        club: club
       });
       if (res.success) {
         setIsEditing(false);
@@ -69,8 +65,8 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
       } else {
         setError(res.error || "Failed to update profile.");
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
@@ -83,7 +79,7 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
       <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1.5">
           <span className="px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full uppercase tracking-widest block w-fit">
-            Y's Men Member
+            Y&apos;s Men Member
           </span>
           <h1 className="text-3xl font-black text-blue-950 tracking-tight leading-tight mt-2">
             Hello, {profile.full_name || "Member"}!
@@ -94,11 +90,11 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
         </div>
         
         <Link 
-          href="/dashboard/onboarding"
+          href={profile.club_id ? "/dashboard/onboarding" : "/dashboard/profile"}
           className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-red-600/10 shrink-0 text-sm active:scale-95"
         >
           <Plus className="w-4 h-4" />
-          <span>Register Business</span>
+          <span>{profile.club_id ? "Register Business" : "Select Club First"}</span>
         </Link>
       </div>
 
@@ -151,16 +147,6 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
                     className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm font-semibold"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Club Affiliation</label>
-                  <input
-                    type="text"
-                    required
-                    value={club}
-                    onChange={(e) => setClub(e.target.value)}
-                    className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm font-semibold"
-                  />
-                </div>
                 <div className="flex gap-2 pt-2">
                   <button
                     type="submit"
@@ -176,7 +162,6 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
                       setIsEditing(false);
                       setFullName(profile.full_name || "");
                       setPhone(profile.phone || "");
-                      setClub(profile.club || "");
                       setError(null);
                     }}
                     className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
@@ -196,6 +181,11 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
                     <p className="text-slate-900 font-bold text-sm truncate mt-1">{profile.full_name}</p>
                   </div>
                 </div>
+                {!profile.club_id && (
+                  <Link href="/dashboard/profile" className="inline-flex text-xs font-bold text-amber-700 hover:text-amber-900">
+                    Select your SWIR club to register a business
+                  </Link>
+                )}
 
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-slate-100 rounded-lg text-slate-500 shrink-0">
@@ -304,10 +294,10 @@ export default function MemberView({ profile, referralCount }: MemberViewProps) 
           </p>
           <div className="pt-2">
             <Link 
-              href="/dashboard/onboarding"
+              href={profile.club_id ? "/dashboard/onboarding" : "/dashboard/profile"}
               className="inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-950 rounded-xl font-bold hover:bg-slate-50 transition-all shadow-md group/btn text-xs active:scale-95"
             >
-              <span>Set Up Your Listing</span>
+              <span>{profile.club_id ? "Set Up Your Listing" : "Select Your Club"}</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
             </Link>
           </div>

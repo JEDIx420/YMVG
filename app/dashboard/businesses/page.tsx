@@ -19,7 +19,7 @@ export default async function BusinessDirectoryPage() {
   }
 
   const profile = await getCurrentProfile();
-  if (!profile || (profile.app_role !== "super_admin" && profile.app_role !== "region_admin")) {
+  if (!profile || (profile.app_role !== "super_admin" && profile.app_role !== "review_admin")) {
     redirect("/dashboard");
   }
 
@@ -103,13 +103,15 @@ export default async function BusinessDirectoryPage() {
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                           </Link>
-                          <Link
-                            href={`/dashboard/business/${b.id}/edit`}
-                            className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                          >
-                            <span>Edit Listing</span>
-                            <ArrowRight className="w-3 h-3" />
-                          </Link>
+                          {(profile?.app_role === "super_admin" || b.owner_id === user.id) && (
+                            <Link
+                              href={`/dashboard/business/${b.id}/edit`}
+                              className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            >
+                              <span>Edit Listing</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </Link>
+                          )}
                           {profile?.app_role === "super_admin" && (
                             <DeleteBusinessButton businessId={b.id} brandName={b.brand_name || "Unnamed Enterprise"} />
                           )}

@@ -38,9 +38,9 @@ export async function deleteBusiness(businessId: string): Promise<{ success: boo
       revalidatePath("/");
 
       return { success: true };
-    } catch (err: any) {
-      console.error("deleteBusiness exception:", err);
-      return { success: false, error: err.message || "An unexpected error occurred." };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      return { success: false, error: errMsg };
     }
   }, { success: false, error: "Authentication failed. Please log in again." });
 }

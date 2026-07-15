@@ -15,13 +15,19 @@ export default async function EditBusinessPage(props: { params: Params }) {
     redirect('/login');
   }
 
-  // Fetch the specific business and securely verify ownership
-  const { data: business } = await supabase
+  const { getCurrentProfile } = await import("@/app/actions/profiles");
+  const profile = await getCurrentProfile();
+
+  const query = supabase
     .from('businesses')
     .select('*')
-    .eq('id', id)
-    .eq('owner_id', user.id)
-    .single();
+    .eq('id', id);
+
+  if (profile?.app_role !== 'super_admin') {
+    query.eq('owner_id', user.id);
+  }
+
+  const { data: business } = await query.single();
 
   if (!business) {
     redirect('/dashboard');

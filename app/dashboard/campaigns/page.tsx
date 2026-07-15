@@ -21,8 +21,8 @@ export default async function CampaignsAdminPage() {
     redirect("/login");
   }
 
-  // Security gate: ONLY super_admin or region_admin can access the approval queue
-  const isAdmin = profile.app_role === "super_admin" || profile.app_role === "region_admin";
+  // Security gate: ONLY super_admin or review_admin can access the approval queue
+  const isAdmin = profile.app_role === "super_admin" || profile.app_role === "review_admin";
   if (!isAdmin) {
     redirect("/dashboard");
   }
@@ -50,7 +50,7 @@ export default async function CampaignsAdminPage() {
 
   // 2. Query all profiles to easily resolve owner names if needed (though contact details are in business table)
   // To keep payload light, we can resolve directly in client using the contact details or fetch profiles
-  let profiles: any[] = [];
+  let profiles: { id: string; full_name: string | null; email: string; phone: string | null; club: string | null }[] = [];
   if (campaigns && campaigns.length > 0) {
     const ownerIds = Array.from(new Set(campaigns.map((c) => c.businesses?.owner_id).filter(Boolean)));
     if (ownerIds.length > 0) {

@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/app/actions/profiles";
 import { createClient } from "@/utils/supabase/server";
-import { Users } from "lucide-react";
-import UserAuditClient from "./UserAuditClient";
+import UserAuditTabs from "./UserAuditTabs";
+import type { RegistrationRequest, SwirClub } from "@/types/database.types";
 
 export const metadata = {
   title: "User Audit - System Console",
@@ -18,14 +18,16 @@ export default async function UserAuditPage() {
   }
 
   const profile = await getCurrentProfile();
-  if (!profile || (profile.app_role !== "super_admin" && profile.app_role !== "region_admin")) {
+  if (!profile || !["review_admin", "super_admin"].includes(profile.app_role)) {
     redirect("/dashboard");
   }
 
   // Fetch profiles and businesses concurrently
-  const [profilesRes, businessesRes] = await Promise.all([
+  const [profilesRes, businessesRes, requestsRes, clubsRes] = await Promise.all([
     supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-    supabase.from("businesses").select("id, brand_name, owner_id, owner_profile_id")
+    supabase.from("businesses").select("id, brand_name, owner_id, owner_profile_id"),
+    supabase.rpc("list_registration_requests", { p_status: null }),
+    supabase.rpc("list_selectable_swir_clubs"),
   ]);
 
   return (
@@ -42,15 +44,12 @@ export default async function UserAuditPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm space-y-6">
-        <h3 className="text-xl font-black text-blue-950 uppercase tracking-tight flex items-center gap-2 border-b border-slate-100 pb-4">
-          <Users className="w-5 h-5 text-red-600" />
-          <span>Active Accounts Directory</span>
-        </h3>
-
-        <UserAuditClient 
-          profiles={profilesRes.data || []} 
-          businesses={businessesRes.data || []} 
+      <div className="bg-white rounded-3xl p-5 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
+        <UserAuditTabs
+          profiles={profilesRes.data || []}
+          businesses={businessesRes.data || []}
+          requests={(requestsRes.data || []) as RegistrationRequest[]}
+          clubs={(clubsRes.data || []) as SwirClub[]}
         />
       </div>
     </div>

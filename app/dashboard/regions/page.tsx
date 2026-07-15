@@ -18,7 +18,7 @@ export default async function RegionsDirectoryPage() {
   }
 
   const profile = await getCurrentProfile();
-  if (!profile || (profile.app_role !== "super_admin" && profile.app_role !== "region_admin")) {
+  if (!profile || (profile.app_role !== "super_admin" && profile.app_role !== "review_admin")) {
     redirect("/dashboard");
   }
 

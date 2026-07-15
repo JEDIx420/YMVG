@@ -184,10 +184,11 @@ export default function PromotionsClient({
           .getPublicUrl(filePath);
 
         proofUrl = publicUrl;
-      } catch (err: any) {
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : "An error occurred while uploading the payment proof.";
         setStatus({
           type: "error",
-          message: err.message || "An error occurred while uploading the payment proof.",
+          message: errMsg,
         });
         setUploadingProof(false);
         setIsSubmitting(false);
@@ -233,11 +234,12 @@ export default function PromotionsClient({
         router.refresh();
         setStatus(null);
       }, 2000);
-    } catch (error: any) {
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : "An unexpected error occurred.";
       console.error(error);
       setStatus({
         type: "error",
-        message: error.message || "An unexpected error occurred.",
+        message: errMsg,
       });
     } finally {
       setIsSubmitting(false);
@@ -254,8 +256,9 @@ export default function PromotionsClient({
         prev.map((c) => (c.id === campaignId ? { ...c, status: "paused" } : c))
       );
       router.refresh();
-    } catch (err: any) {
-      alert(err.message || "Could not complete action.");
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Could not complete action.";
+      alert(errMsg);
     } finally {
       setActionLoadingId(null);
     }
@@ -287,6 +290,12 @@ export default function PromotionsClient({
         return (
           <span className="inline-flex items-center gap-1 px-3 py-1 bg-rose-50 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 uppercase tracking-wider">
             Expired
+          </span>
+        );
+      case "rejected":
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-50 text-red-700 text-xs font-bold rounded-lg border border-red-200 uppercase tracking-wider">
+            Rejected
           </span>
         );
       default:
@@ -402,7 +411,7 @@ export default function PromotionsClient({
                           <TrendingUp className="w-4 h-4 text-blue-900" />
                         </div>
                         <p className="text-[11px] text-slate-500 font-light mt-2 leading-relaxed">
-                          Boost your listing's ranking in search results using custom multiplier weights (1.2x to 3.0x).
+                          Boost your listing&apos;s ranking in search results using custom multiplier weights (1.2x to 3.0x).
                         </p>
                       </div>
                       <div className="flex items-center justify-between pt-3 border-t border-slate-100">

@@ -34,7 +34,7 @@ export default function BusinessSpotlightPage({ params }: PageProps) {
     async function fetchBusiness() {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from("businesses")
+        .from("public_businesses")
         .select(`
           id, 
           brand_name, 

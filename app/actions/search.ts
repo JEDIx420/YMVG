@@ -32,7 +32,7 @@ export async function performHybridSearch(
 
     // Stage 1: Empty Query Bypass (Category/Location-only browsing)
     if (!trimmedQuery) {
-      let query = supabase.from('businesses').select('*');
+      let query = supabase.from('public_businesses').select('*');
       
       if (category && category !== 'All') {
         query = query.eq('category', category);
@@ -73,14 +73,16 @@ export async function performHybridSearch(
       return [];
     }
 
+    const searchResults = data as SearchResult[];
+
     // Dynamic Relational Drop-off Filter
-    const topScore = data[0].search_score;
+    const topScore = searchResults[0].search_score;
     const DROPOFF_THRESHOLD = 0.50;
     const minimumAcceptableScore = topScore * DROPOFF_THRESHOLD;
     
-    const filteredResults = data.filter((business: any) => business.search_score >= minimumAcceptableScore);
+    const filteredResults = searchResults.filter((business) => (business.search_score ?? 0) >= minimumAcceptableScore);
 
-    return (filteredResults as SearchResult[]).map(b => ({
+    return filteredResults.map(b => ({
       ...b,
       search_score: b.search_score,
       is_boosted: b.is_boosted
@@ -107,7 +109,7 @@ export async function getUniqueCategories(): Promise<string[]> {
 
   try {
     const { data, error } = await supabase
-      .from('businesses')
+      .from('public_businesses')
       .select('category')
       .not('category', 'is', null);
 
@@ -138,7 +140,7 @@ export async function getUniqueCities(): Promise<string[]> {
 
   try {
     const { data, error } = await supabase
-      .from('businesses')
+      .from('public_businesses')
       .select('city')
       .not('city', 'is', null);
 

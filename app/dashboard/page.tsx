@@ -29,13 +29,13 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const view = resolvedSearchParams.view;
 
-  if (profile.app_role === "super_admin" && view === "owner") {
+  if ((profile.app_role === "super_admin" || profile.app_role === "review_admin") && view === "owner") {
     const { data: businesses } = await supabase
       .from("businesses")
       .select("*")
       .eq("owner_id", user.id);
 
-    let analyticsEvents: any[] = [];
+    let analyticsEvents: { business_id: string; event_type: "view" | "referral" }[] = [];
     if (businesses && businesses.length > 0) {
       const bizIds = businesses.map(b => b.id);
       const { data: events } = await supabase
@@ -60,7 +60,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   // 3. Dynamic database query dispatch based on user role parameters
   switch (profile.app_role) {
     case "super_admin":
-    case "region_admin": {
+    case "review_admin": {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -87,7 +87,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       // Aggregate Category Stats
       const catCounts: { [key: string]: number } = {};
       if (allBusinessesRes.data) {
-        allBusinessesRes.data.forEach((b: any) => {
+        allBusinessesRes.data.forEach((b: { category: string | null }) => {
           const cat = b.category || "Other";
           catCounts[cat] = (catCounts[cat] || 0) + 1;
         });
@@ -100,7 +100,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       // Aggregate Campaign Status Stats
       const statusCounts: { [key: string]: number } = {};
       if (allCampaignsRes.data) {
-        allCampaignsRes.data.forEach((c: any) => {
+        allCampaignsRes.data.forEach((c: { status: string | null }) => {
           const status = c.status || "draft";
           statusCounts[status] = (statusCounts[status] || 0) + 1;
         });
@@ -130,7 +130,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         .select("*")
         .eq("owner_id", user.id);
 
-      let analyticsEvents: any[] = [];
+      let analyticsEvents: { business_id: string; event_type: "view" | "referral" }[] = [];
       
       if (businesses && businesses.length > 0) {
         const bizIds = businesses.map(b => b.id);

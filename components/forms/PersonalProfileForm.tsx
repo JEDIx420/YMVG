@@ -7,6 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
 import { updatePersonalProfile } from "@/app/actions/profiles";
+import { setMyInitialClub } from "@/app/actions/registrationRequests";
+import ClubCombobox from "@/components/forms/ClubCombobox";
 import { 
   Loader2, 
   User, 
@@ -16,7 +18,7 @@ import {
   AlertCircle, 
   Shield, 
   Hash, 
-  Landmark, 
+  Landmark,
   Globe,
   Home,
   Briefcase,
@@ -24,16 +26,12 @@ import {
   ArrowRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Profile } from "@/types/database.types";
+import { Profile, SwirClub } from "@/types/database.types";
 
 const personalProfileSchema = z.object({
   full_name: z.string().min(2, "Full name must be at least 2 characters."),
   phone: z.string().min(5, "Please enter a valid phone number."),
   imis_id: z.string().nullable().optional(),
-  ym_region: z.string().nullable().optional(),
-  ym_district: z.string().nullable().optional(),
-  ym_zone: z.string().nullable().optional(),
-  ym_club: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
   state: z.string().nullable().optional(),
@@ -46,6 +44,7 @@ type PersonalProfileFormValues = z.infer<typeof personalProfileSchema>;
 
 interface PersonalProfileFormProps {
   profile: Profile;
+  clubs: SwirClub[];
   linkedBusinesses: {
     id: string;
     brand_name: string | null;
@@ -55,10 +54,12 @@ interface PersonalProfileFormProps {
   }[];
 }
 
-export default function PersonalProfileForm({ profile, linkedBusinesses }: PersonalProfileFormProps) {
+export default function PersonalProfileForm({ profile, clubs, linkedBusinesses }: PersonalProfileFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [clubId, setClubId] = useState(profile.club_id || "");
+  const [clubSaving, setClubSaving] = useState(false);
 
   const {
     register,
@@ -70,10 +71,6 @@ export default function PersonalProfileForm({ profile, linkedBusinesses }: Perso
       full_name: profile.full_name || "",
       phone: profile.phone || "",
       imis_id: profile.imis_id || "",
-      ym_region: profile.ym_region || "",
-      ym_district: profile.ym_district || "",
-      ym_zone: profile.ym_zone || "",
-      ym_club: profile.ym_club || profile.club || "",
       address: profile.address || "",
       city: profile.city || "",
       state: profile.state || "",
@@ -92,13 +89,6 @@ export default function PersonalProfileForm({ profile, linkedBusinesses }: Perso
       formData.append("full_name", data.full_name);
       formData.append("phone", data.phone);
       if (data.imis_id) formData.append("imis_id", data.imis_id);
-      if (data.ym_region) formData.append("ym_region", data.ym_region);
-      if (data.ym_district) formData.append("ym_district", data.ym_district);
-      if (data.ym_zone) formData.append("ym_zone", data.ym_zone);
-      if (data.ym_club) {
-        formData.append("ym_club", data.ym_club);
-        formData.append("club", data.ym_club);
-      }
       if (data.address) formData.append("address", data.address);
       if (data.city) formData.append("city", data.city);
       if (data.state) formData.append("state", data.state);
@@ -114,9 +104,9 @@ export default function PersonalProfileForm({ profile, linkedBusinesses }: Perso
 
       setStatus({ type: "success", message: "Personal profile updated successfully!" });
       router.refresh();
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setStatus({ type: "error", message: error.message || "Failed to update profile." });
+      setStatus({ type: "error", message: error instanceof Error ? error.message : "Failed to update profile." });
     } finally {
       setIsSubmitting(false);
     }
@@ -229,60 +219,38 @@ export default function PersonalProfileForm({ profile, linkedBusinesses }: Perso
               </div>
             </div>
 
-            {/* Y's Men Club */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-blue-950 uppercase tracking-wider block">Y's Men Club</label>
-              <div className="relative">
-                <Landmark className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Enter club affiliation"
-                  {...register("ym_club")}
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300 focus:bg-white focus:border-blue-950 focus:ring-2 focus:ring-blue-950/5 outline-none text-sm font-semibold transition-all text-slate-800"
-                />
-              </div>
-            </div>
-
-            {/* Region */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-blue-950 uppercase tracking-wider block">Region</label>
-              <div className="relative">
-                <Globe className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="e.g. SWIR"
-                  {...register("ym_region")}
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300 focus:bg-white focus:border-blue-950 focus:ring-2 focus:ring-blue-950/5 outline-none text-sm font-semibold transition-all text-slate-800"
-                />
-              </div>
-            </div>
-
-            {/* District */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-blue-950 uppercase tracking-wider block">District</label>
-              <div className="relative">
-                <MapPin className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="e.g. District I"
-                  {...register("ym_district")}
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300 focus:bg-white focus:border-blue-950 focus:ring-2 focus:ring-blue-950/5 outline-none text-sm font-semibold transition-all text-slate-800"
-                />
-              </div>
-            </div>
-
-            {/* Zone */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-blue-955 uppercase tracking-wider block">Zone</label>
-              <div className="relative">
-                <MapPin className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="e.g. Zone A"
-                  {...register("ym_zone")}
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300 focus:bg-white focus:border-blue-950 focus:ring-2 focus:ring-blue-950/5 outline-none text-sm font-semibold transition-all text-slate-800"
-                />
-              </div>
+            <div className="space-y-3 md:col-span-2">
+              {profile.club_id ? (
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-blue-600">Approved club affiliation</p>
+                  <p className="mt-2 text-base font-black text-blue-950">{profile.ym_club || profile.club}</p>
+                  <p className="mt-1 text-sm text-blue-800">District {profile.ym_district} - Zone {profile.ym_zone} - {profile.ym_region}</p>
+                  <p className="mt-2 text-xs text-blue-700">Contact a reviewer or super admin if this approved affiliation needs correction.</p>
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+                  <ClubCombobox clubs={clubs} value={clubId} onChange={setClubId} label="Select your club once" required />
+                  <p className="text-xs text-amber-800">Your district, zone, and region will be derived automatically. This self-service selection can be completed only once.</p>
+                  <button
+                    type="button"
+                    disabled={!clubId || clubSaving}
+                    onClick={async () => {
+                      setClubSaving(true);
+                      setStatus(null);
+                      const result = await setMyInitialClub({ club_id: clubId });
+                      setStatus({
+                        type: result.success ? "success" : "error",
+                        message: result.message || result.error || "Club affiliation could not be saved.",
+                      });
+                      setClubSaving(false);
+                      if (result.success) router.refresh();
+                    }}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-950 px-5 py-3 text-sm font-bold text-white hover:bg-black disabled:opacity-50"
+                  >
+                    {clubSaving && <Loader2 className="h-4 w-4 animate-spin" />} Save club affiliation
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { Resend } from "resend";
 import { z } from "zod";
-import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { LeadEmail } from "@/components/emails/LeadEmail";
 import { render } from "@react-email/render";
 import React from "react";
@@ -11,20 +11,46 @@ import React from "react";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const leadSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().min(5, "Phone number is required"),
-  message: z.string().min(10, "Message must be at least 10 characters"),
-  businessId: z.string(),
-});
+  name: z.string().min(2, "Name is required").max(100, "Name must be under 100 characters"),
+  email: z.string().email("Invalid email address").max(100, "Email must be under 100 characters"),
+  phone: z.string().min(5, "Phone number is required").max(30, "Phone number must be under 30 characters"),
+  message: z.string().min(10, "Message must be at least 10 characters").max(1000, "Message must be under 1000 characters"),
+  businessId: z.string().uuid("Invalid business ID"),
+  token: z.string().optional().nullable(),
+}).strict();
 
 export async function sendLead(formData: z.infer<typeof leadSchema>) {
   try {
     // 1. Validate form data
     const validatedData = leadSchema.parse(formData);
-    const supabase = await createClient();
 
-    // 2. Fetch business contact email and brand name
+    // 2. Validate Turnstile only when explicitly enabled.
+    const turnstileEnabled = process.env.TURNSTILE_ENABLED === "true";
+    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
+
+    if (turnstileEnabled) {
+      if (!turnstileSecret || turnstileSecret === "your_turnstile_secret_key") {
+        console.error("TURNSTILE_SECRET_KEY is missing while Turnstile is enabled.");
+        return { success: false, error: "System configuration error. Please contact administration." };
+      }
+      if (!validatedData.token) {
+        return { success: false, error: "Security validation token is missing." };
+      }
+      const verifyUrl = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+      const verifyResponse = await fetch(verifyUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `secret=${encodeURIComponent(turnstileSecret)}&response=${encodeURIComponent(validatedData.token)}`
+      });
+      const verifyOutcome = await verifyResponse.json();
+      if (!verifyOutcome.success) {
+        return { success: false, error: "Security validation failed. Please refresh and try again." };
+      }
+    }
+
+    const supabase = createAdminClient();
+
+    // 3. Fetch business contact email and brand name
     const { data: business, error: dbError } = await supabase
       .from("businesses")
       .select("contact_email, owner_email, brand_name")
@@ -40,7 +66,7 @@ export async function sendLead(formData: z.infer<typeof leadSchema>) {
       };
     }
 
-    // 2.5 Store lead in public.leads database
+    // 4. Store lead in public.leads database
     const { error: insertLeadError } = await supabase
       .from("leads")
       .insert({
@@ -59,8 +85,7 @@ export async function sendLead(formData: z.infer<typeof leadSchema>) {
       };
     }
 
-    // 3. Manual Rendering for React 19 Compatibility
-    // This bypasses Resend's internal legacy render methods that throw "render is not a function"
+    // 5. Manual Rendering for React 19 Compatibility
     const htmlContent = await render(React.createElement(LeadEmail, {
       senderName: validatedData.name,
       senderEmail: validatedData.email,
@@ -69,7 +94,7 @@ export async function sendLead(formData: z.infer<typeof leadSchema>) {
       businessName: business.brand_name || "your business",
     }));
 
-    // 4. Dispatch email via Resend
+    // 6. Dispatch email via Resend
     try {
       const { error: emailError } = await resend.emails.send({
         from: "Y's Men's International Directory <leads@ymidirectory.com>",
@@ -89,10 +114,11 @@ export async function sendLead(formData: z.infer<typeof leadSchema>) {
       console.error("RESEND_ERROR:", sendErr);
       return { success: false, error: "Failed to send email. Please try again later." };
     }
-  } catch (err: any) {
+  } catch (err) {
     if (err instanceof z.ZodError) {
       return { success: false, error: err.issues[0].message };
     }
-    return { success: false, error: err.message || "An unexpected error occurred." };
+    const errMsg = err instanceof Error ? err.message : "An unexpected error occurred.";
+    return { success: false, error: errMsg };
   }
 }

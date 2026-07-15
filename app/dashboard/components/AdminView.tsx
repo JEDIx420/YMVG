@@ -92,6 +92,8 @@ export default function AdminView({
         return "bg-slate-400";
       case "expired":
         return "bg-rose-500";
+      case "rejected":
+        return "bg-red-500";
       default:
         return "bg-purple-500";
     }
@@ -201,8 +203,8 @@ export default function AdminView({
           </div>
         </div>
 
-        <div className="w-full h-[320px] pt-2">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="relative h-[320px] w-full min-w-0 pt-2">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 320 }}>
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">

@@ -84,14 +84,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (supabaseUrl && supabaseAnonKey) {
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
       const { data: businesses } = await supabase
-        .from("businesses")
-        .select("id, updated_at")
-        .order("updated_at", { ascending: false });
+        .from("public_businesses")
+        .select("id");
 
       if (businesses && businesses.length > 0) {
         const businessRoutes: MetadataRoute.Sitemap = businesses.map((b) => ({
           url: `${baseUrl}/directory/${b.id}`,
-          lastModified: b.updated_at ? new Date(b.updated_at) : new Date(),
+          lastModified: new Date(),
           changeFrequency: "weekly",
           priority: 0.7,
         }));
