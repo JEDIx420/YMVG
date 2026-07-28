@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { Mail, Phone, MapPin, Award, Copy, Check, Shield } from "lucide-react";
+import { Mail, Phone, MapPin, Award, Copy, Check, Shield, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 // Types
@@ -142,10 +142,29 @@ export default function LeadershipPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-lg md:text-xl text-blue-100/80 font-light max-w-2xl mx-auto leading-relaxed"
+            className="text-lg md:text-xl text-blue-100/80 font-light max-w-2xl mx-auto leading-relaxed mb-6"
           >
             Meet the dedicated cabinet members leading Y's Men International in the South West India Region, committed to fellowship, duty, and community service.
           </motion.p>
+
+          {/* Regional Mandate Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="inline-block p-4 md:p-5 rounded-2xl bg-slate-900/90 border border-amber-400/30 shadow-xl backdrop-blur-md max-w-xl mx-auto text-center space-y-1.5"
+          >
+            <div className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold text-amber-400 uppercase tracking-widest">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Theme 2026–27</span>
+            </div>
+            <p className="text-base md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-yellow-400">
+              “Moving Forward Together for Success”
+            </p>
+            <p className="text-xs md:text-sm text-blue-200 font-medium italic">
+              Slogan: <span className="text-amber-200">“Let us Grow Together by Helping Each other”</span>
+            </p>
+          </motion.div>
         </div>
       </section>
 

@@ -1,5 +1,9 @@
+"use client";
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { motion } from 'framer-motion'
+import { Sparkles, HeartHandshake } from 'lucide-react'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -11,13 +15,13 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="space-y-6">
             <Link href="/" className="flex items-center gap-4 group">
-              <div className="relative w-12 h-12">
+              <div className="relative w-12 h-12 transition-transform duration-300 group-hover:scale-105">
                 <Image 
                   src="/ysmen-footer-logo.png"
                   alt="Y's Men's International Logo"
                   fill
                   sizes="48px"
-                  className="object-contain"
+                  className="object-contain filter drop-shadow"
                 />
               </div>
               <h2 className="text-2xl font-black text-white tracking-tighter">
@@ -27,11 +31,42 @@ export default function Footer() {
             <p className="text-sm leading-relaxed max-w-xs text-gray-400">
               The South West India Region (SWIR) of Y's Men's International is dedicated to service, fellowship, and building sustainable communities through our global network of clubs.
             </p>
-            <div className="pt-2">
-              <span className="inline-block px-3 py-1 text-xs font-semibold bg-blue-900/30 text-blue-400 rounded-full border border-blue-800/50">
-                Est. 1922 • Serving Globally
-              </span>
-            </div>
+
+            {/* Premium SWIR 2026-27 Theme & Slogan Card */}
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -3, scale: 1.01 }}
+              transition={{ duration: 0.4 }}
+              className="relative p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 via-blue-950/80 to-slate-900/90 border border-amber-400/30 hover:border-amber-400/60 shadow-lg hover:shadow-[0_0_25px_rgba(251,191,36,0.15)] transition-all duration-300 group overflow-hidden max-w-sm"
+            >
+              {/* Subtle Ambient Glow */}
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-400/10 rounded-full blur-2xl group-hover:bg-amber-400/20 transition-all duration-500"></div>
+
+              <div className="relative z-10 space-y-2">
+                <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-amber-400 uppercase tracking-widest">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <span>SWIR 2026 – 27 Mandate</span>
+                </div>
+                
+                <div>
+                  <span className="text-[10px] text-amber-300/80 font-bold uppercase tracking-wider block">Theme</span>
+                  <p className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-yellow-400 leading-snug">
+                    “Moving Forward Together for Success”
+                  </p>
+                </div>
+
+                <div className="pt-1 border-t border-white/5">
+                  <span className="text-[10px] text-blue-300/80 font-bold uppercase tracking-wider block">Slogan</span>
+                  <p className="text-xs text-blue-200 font-medium italic leading-relaxed flex items-center gap-1.5">
+                    <HeartHandshake className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    <span>“Let us Grow Together by Helping Each other”</span>
+                  </p>
+                </div>
+              </div>
+            </motion.div>
           </div>
 
           {/* Quick Links Column */}

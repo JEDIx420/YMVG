@@ -207,7 +207,27 @@ export default function Sidebar({ profile }: SidebarProps) {
         </div>
 
         {/* Lower Section (Profile & Actions) */}
-        <div className="pt-6 border-t border-slate-200">
+        <div className="pt-4 border-t border-slate-200 space-y-3">
+          {/* SWIR 2026-27 Regional Theme Mini Card */}
+          <div className="p-3.5 bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 text-white rounded-2xl border border-amber-400/30 hover:border-amber-400/60 shadow-md hover:shadow-lg transition-all duration-300 space-y-1.5 group relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                SWIR 2026–27
+              </span>
+              <Sparkles className="w-3 h-3 text-amber-400 opacity-80 group-hover:scale-110 transition-transform" />
+            </div>
+            <div>
+              <span className="text-[9px] font-bold text-amber-300/80 uppercase block">Theme</span>
+              <p className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-400 leading-snug">
+                “Moving Forward Together for Success”
+              </p>
+            </div>
+            <p className="text-[10px] text-blue-200 font-medium italic pt-0.5 border-t border-white/5">
+              “Let us Grow Together by Helping Each other”
+            </p>
+          </div>
+
           {/* User Identity Info Card */}
           <div className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-slate-200/80 mb-4 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-amber-500 text-white flex items-center justify-center font-bold text-sm shrink-0 uppercase shadow-sm">

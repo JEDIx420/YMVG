@@ -3,7 +3,7 @@
 import React, { useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Globe, Clock, Heart, Handshake } from "lucide-react";
+import { Globe, Clock, Heart, Handshake, TrendingUp, Users, Sparkles, ArrowRight } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
 
 const containerVariants = {
@@ -40,7 +40,7 @@ export default function LandingClientLayout({ children }: { children: React.Reac
       {/* Step 1: NGO Hero Section with Parallax */}
       <section 
         ref={heroRef}
-        className="relative min-h-[85vh] flex items-center justify-center overflow-hidden" 
+        className="relative min-h-[90vh] flex items-center justify-center overflow-hidden" 
       >
         {/* Parallax Background Image */}
         <motion.div 
@@ -52,7 +52,7 @@ export default function LandingClientLayout({ children }: { children: React.Reac
         />
         
         {/* Navy Overlay */}
-        <div className="absolute inset-0 bg-blue-950/80 mix-blend-multiply"></div>
+        <div className="absolute inset-0 bg-blue-950/85 mix-blend-multiply"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-24">
           <motion.div
@@ -70,14 +70,16 @@ export default function LandingClientLayout({ children }: { children: React.Reac
               priority
             />
           </motion.div>
+
           <motion.p 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-blue-200 uppercase tracking-[0.2em] font-bold text-sm mb-6 italic"
+            className="text-blue-200 uppercase tracking-[0.2em] font-bold text-xs md:text-sm mb-6 italic"
           >
             "To acknowledge the duty that accompanies every right."
           </motion.p>
+
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -87,6 +89,7 @@ export default function LandingClientLayout({ children }: { children: React.Reac
             Y's Men International<br />
             <span className="text-blue-400">South West India Region</span>
           </motion.h1>
+
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -96,6 +99,7 @@ export default function LandingClientLayout({ children }: { children: React.Reac
             A global fellowship of like-minded individuals partnering with the YMCA, dedicated to community service, 
             cultural exchange, and supporting one another in professional excellence.
           </motion.p>
+
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -115,6 +119,119 @@ export default function LandingClientLayout({ children }: { children: React.Reac
               Learn About Our Legacy
             </Link>
           </motion.div>
+        </div>
+      </section>
+
+      {/* SWIR 2026-27 Regional Vision & Pillar Cards */}
+      <section className="py-20 md:py-24 bg-gradient-to-b from-blue-950 via-slate-950 to-blue-950 text-white relative border-b border-blue-900/60 overflow-hidden">
+        {/* Background Ambient Glow Orbs */}
+        <div className="absolute top-1/4 left-10 w-96 h-96 bg-amber-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+        <div className="absolute bottom-1/4 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <motion.span 
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-400/10 text-amber-300 text-xs font-extrabold rounded-full border border-amber-400/30 uppercase tracking-widest shadow-inner"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+              Regional Direction 2026–27
+            </motion.span>
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white">
+              Our Vision & Core Mandate
+            </h2>
+            <p className="text-gray-300 text-base md:text-lg font-light leading-relaxed">
+              Guiding the South West India Region towards unity, economic empowering, and communal fellowship.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+            {/* Card 1: Theme */}
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -8, scale: 1.01 }}
+              transition={{ duration: 0.4 }}
+              className="relative p-8 md:p-10 rounded-3xl bg-slate-900/90 border border-amber-500/30 hover:border-amber-400/60 shadow-2xl hover:shadow-[0_0_35px_rgba(251,191,36,0.15)] backdrop-blur-md flex flex-col justify-between group transition-all duration-500 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-400/20 transition-all duration-500"></div>
+              
+              <div className="relative z-10 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-inner">
+                    <TrendingUp className="w-7 h-7" />
+                  </div>
+                  <span className="text-[10px] font-black text-amber-400/70 border border-amber-400/20 px-3 py-1 rounded-full uppercase tracking-widest">
+                    Pillar 01
+                  </span>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Regional Theme</span>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-300 to-yellow-400 leading-tight">
+                    “Moving Forward Together for Success”
+                  </h3>
+                </div>
+
+                <p className="text-gray-300 text-sm md:text-base leading-relaxed font-light">
+                  A collective call for progress and synergy across all SWIR clubs. By aligning our goals, celebrating combined achievements, and embracing innovation, we drive sustainable success across our region.
+                </p>
+              </div>
+
+              <div className="relative z-10 pt-6 mt-6 border-t border-amber-500/20 flex items-center text-xs font-bold text-amber-300 gap-2 group-hover:translate-x-1 transition-transform">
+                <span>Empowering Regional Progress</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </motion.div>
+
+            {/* Card 2: Slogan */}
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -8, scale: 1.01 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="relative p-8 md:p-10 rounded-3xl bg-slate-900/90 border border-blue-500/30 hover:border-blue-400/60 shadow-2xl hover:shadow-[0_0_35px_rgba(56,189,248,0.15)] backdrop-blur-md flex flex-col justify-between group transition-all duration-500 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-400/20 transition-all duration-500"></div>
+
+              <div className="relative z-10 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-400/10 border border-blue-400/30 flex items-center justify-center text-blue-400 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300 shadow-inner">
+                    <Users className="w-7 h-7" />
+                  </div>
+                  <span className="text-[10px] font-black text-blue-400/70 border border-blue-400/20 px-3 py-1 rounded-full uppercase tracking-widest">
+                    Pillar 02
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <Heart className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Regional Slogan</span>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-200 via-blue-300 to-indigo-200 leading-tight">
+                    “Let us Grow Together by Helping Each other”
+                  </h3>
+                </div>
+
+                <p className="text-gray-300 text-sm md:text-base leading-relaxed font-light">
+                  Embodying mutual support and business directory synergy. When Y's Men members choose to support each other's enterprises and service projects, every individual and community thrives.
+                </p>
+              </div>
+
+              <div className="relative z-10 pt-6 mt-6 border-t border-blue-500/20 flex items-center text-xs font-bold text-blue-300 gap-2 group-hover:translate-x-1 transition-transform">
+                <span>Fostering Mutual Support</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
@@ -223,3 +340,4 @@ export default function LandingClientLayout({ children }: { children: React.Reac
     </div>
   );
 }
+
