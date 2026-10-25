@@ -31,3 +31,13 @@ export const registrationReviewSchema = z.object({
     });
   }
 });
+
+export const candidateSearchSchema = z.object({
+  request_id: z.string().uuid(),
+  search: z.string().trim().max(100).nullable().optional(),
+}).strict();
+
+export const linkProfileSchema = z.object({
+  request_id: z.string().uuid(),
+  profile_id: z.string().uuid(),
+}).strict();

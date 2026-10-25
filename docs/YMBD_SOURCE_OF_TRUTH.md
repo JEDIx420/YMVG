@@ -113,9 +113,12 @@ Migration `022` prepares `public.before_user_created_approved_email(jsonb)`. It 
 - `submit_registration_request(...)`: public controlled `SECURITY DEFINER` RPC; validates/normalizes input, accepts only `club_id`, checks a selectable club, and returns a generic response.
 - `list_registration_requests(status)`: reviewer-only listing RPC used by User Audit.
 - `review_registration_request(...)`: `review_admin`/`super_admin` gate; locks pending rows, validates approve/reject, requires a rejection reason, permits corrected club selection, and records immutable audit history.
-- `activate_approved_member()`: authenticated activation gate; creates or binds only a `member` profile and atomically marks the request activated.
+- `find_registration_profile_candidates(request_id, search)`: `review_admin`/`super_admin` RPC; searches existing profiles for candidate identity matches (exact phone, iMIS ID, name) without auto-merging.
+- `link_registration_request_to_existing_profile(request_id, profile_id)`: `review_admin`/`super_admin` RPC; links a pending/approved request to an existing profile, preserving existing profile ID, user_id, login email, app_role, and businesses while updating approved member fields and setting request status to `activated`.
+- `activate_approved_member()`: authenticated activation gate; creates a new `member` profile or updates an existing approved profile for exact-email matches while strictly preserving existing profile roles (`business_owner`, `review_admin`, `super_admin`, `member`).
 
-The UI is in `app/dashboard/users/RegistrationRequestsClient.tsx` and `UserAuditTabs.tsx`. Approval never assigns `business_owner`, `review_admin`, or `super_admin`. `business_owner` promotion occurs only through successful business creation.
+The UI is in `app/dashboard/users/RegistrationRequestsClient.tsx` and `UserAuditTabs.tsx`. Approval never assigns `business_owner`, `review_admin`, or `super_admin`. Candidate warnings flag potential matches, but cross-email linking requires an explicit manual reviewer action. Auth email changes are not performed during linking and require a separate deliberate auth workflow.
+
 
 ## G. Club Master and Hierarchy
 
@@ -134,7 +137,7 @@ Region is always `SWIR`. The database function `swir_zone_for_district()` and ge
 
 `list_selectable_swir_clubs()` is available to anonymous and authenticated callers. `set_my_initial_club(uuid)` allows a legacy user with null `club_id` to select once. `assign_profile_club(uuid, uuid)` allows an audited reviewer correction.
 
-Migration `019` was generated from `public/SWIR CLUB STATUS 2025-26.pdf`: 169 source rows, 168 unique club iMIS IDs, with the duplicate and spelling findings in `docs/CLUB_DATA_QUALITY_REPORT.md`.
+Migration `019` was generated from `public/SWIR CLUB STATUS 2025-26.pdf`: 169 source rows, 168 unique club iMIS IDs, with the duplicate and spelling findings in `docs/CLUB_DATA_QUALITY_REPORT.md`. Migration `026` added 'Karungal Royal' (District 1, Zone 1, Region SWIR) and updated `imis_club_id` to be nullable so newly formed clubs can be added before an official iMIS Club ID is assigned.
 
 ## H. Profile Model
 
@@ -243,6 +246,8 @@ All rows below are repository migrations intended for manual SQL Editor executio
 | `021` | Approved activation, approval marker, existing-user compatibility | Production unknown | Leaves legacy trigger until cutover |
 | `022` | Final login cutover, Auth Hook function, club protection/business derivation | Production unknown | Must follow compatible frontend deployment |
 | `023` | Lock profile insert/delete and protected-column privileges | Production unknown | Verify with manual script `05` |
+| `024` | Reviewer profile linking, candidate search RPC, role preservation | Production unknown | Verify with manual script `06` |
+| `025` | Fix ambiguous column reference in `create_my_business` and `CURRENT_ROLE` collision in `promote_to_business_owner` | Applied | Verified with E2E test |
 
 Never infer production state from file presence. Use `supabase_migrations.schema_migrations` and the manual verification scripts.
 

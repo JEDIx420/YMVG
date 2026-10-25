@@ -88,7 +88,7 @@ export interface Profile {
 
 export interface SwirClub {
   id: string;
-  imis_club_id: string;
+  imis_club_id: string | null;
   canonical_name: string;
   club_type: string;
   district_number: number;
@@ -106,7 +106,7 @@ export interface RegistrationRequest {
   member_imis_id: string | null;
   club_id: string;
   club_name: string;
-  imis_club_id: string;
+  imis_club_id: string | null;
   district_number: number;
   zone_number: number;
   region_code: "SWIR";
@@ -115,6 +115,33 @@ export interface RegistrationRequest {
   reviewed_at: string | null;
   reviewer_name: string | null;
   rejection_reason: string | null;
+}
+
+export interface RegistrationCandidateProfile {
+  profile_id: string;
+  full_name: string | null;
+  email: string;
+  phone: string | null;
+  imis_id: string | null;
+  club_id: string | null;
+  club_name: string | null;
+  app_role: AppRole;
+  has_auth_binding: boolean;
+  owned_business_count: number;
+  match_reasons: string[];
+  match_strength: 'high' | 'medium' | 'low';
+}
+
+export interface LinkRegistrationProfileResult {
+  profile_id: string;
+  preserved_profile_email: string;
+  request_email: string;
+  preserved_role: AppRole;
+  club_name: string;
+  district_number: number;
+  zone_number: number;
+  region_code: string;
+  request_status: string;
 }
 
 export interface RoleAudit {

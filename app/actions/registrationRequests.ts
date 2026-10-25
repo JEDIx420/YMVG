@@ -6,7 +6,10 @@ import { createClient } from "@/utils/supabase/server";
 import {
   registrationRequestSchema,
   registrationReviewSchema,
+  candidateSearchSchema,
+  linkProfileSchema,
 } from "@/lib/validation/registration";
+import type { RegistrationCandidateProfile } from "@/types/database.types";
 
 export type RegistrationActionResult = {
   success: boolean;
@@ -76,7 +79,64 @@ export async function reviewRegistrationRequest(rawPayload: unknown): Promise<Re
   }
 
   revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/onboarding");
   return { success: true, message: data || "Registration request updated." };
+}
+
+export async function findRegistrationProfileCandidates(
+  rawPayload: unknown
+): Promise<{ success: boolean; data?: RegistrationCandidateProfile[]; error?: string }> {
+  const parsed = candidateSearchSchema.safeParse(rawPayload);
+  if (!parsed.success) {
+    return { success: false, error: "Invalid search parameters." };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: "Authentication required." };
+  }
+
+  const { data, error } = await supabase.rpc("find_registration_profile_candidates", {
+    p_request_id: parsed.data.request_id,
+    p_search: parsed.data.search || null,
+  });
+
+  if (error) {
+    console.error("Candidate profile search failed:", error);
+    return { success: false, error: "Unable to search candidate profiles." };
+  }
+
+  return { success: true, data: (data || []) as RegistrationCandidateProfile[] };
+}
+
+export async function linkRegistrationRequestToExistingProfile(
+  rawPayload: unknown
+): Promise<RegistrationActionResult> {
+  const parsed = linkProfileSchema.safeParse(rawPayload);
+  if (!parsed.success) {
+    return { success: false, error: "Invalid profile linking payload." };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: "Authentication required." };
+  }
+
+  const { error } = await supabase.rpc("link_registration_request_to_existing_profile", {
+    p_request_id: parsed.data.request_id,
+    p_profile_id: parsed.data.profile_id,
+  });
+
+  if (error) {
+    console.error("Profile linking failed:", error);
+    return { success: false, error: error.message || "Registration request could not be linked to profile." };
+  }
+
+  revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/onboarding");
+  return { success: true, message: "Registration request successfully linked to existing profile." };
 }
 
 const initialClubSchema = z.object({ club_id: z.string().uuid() }).strict();

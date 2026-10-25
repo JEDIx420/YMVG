@@ -29,7 +29,7 @@ export default function ClubCombobox({
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
   const filteredClubs = clubs.filter((club) => {
     if (!deferredQuery) return true;
-    return `${club.canonical_name} ${club.imis_club_id} district ${club.district_number}`
+    return `${club.canonical_name} ${club.imis_club_id || ""} district ${club.district_number}`
       .toLowerCase()
       .includes(deferredQuery);
   });
@@ -113,7 +113,7 @@ export default function ClubCombobox({
                   <span>
                     <span className="block text-sm font-bold text-slate-900">{club.canonical_name}</span>
                     <span className="mt-0.5 block text-xs text-slate-500">
-                      District {club.district_number} - Zone {club.zone_number} - iMIS {club.imis_club_id}
+                      District {club.district_number} - Zone {club.zone_number}{club.imis_club_id ? ` - iMIS ${club.imis_club_id}` : ""}
                     </span>
                   </span>
                   {club.id === value && <Check className="mt-1 h-4 w-4 shrink-0 text-blue-600" />}
